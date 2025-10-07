@@ -1,35 +1,59 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ToastProvider } from './components/notifications/ToastContext';
-import MainLayout from './components/layout/MainLayout';
-import ClaimsListPage from './pages/ClaimsListPage';
-import ClaimDetailsPage from './pages/ClaimDetailsPage';
-import ClaimEditorPage from './pages/ClaimEditorPage';
-import PendingClaimsPage from './pages/PendingClaimsPage';
-import AnalyticsPage from './pages/AnalyticsPage';
-import AdjudicationPage from './pages/AdjudicationPage';
-import AdjudicationResultPage from './pages/AdjudicationResultPage';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { useSelector } from 'react-redux'
+import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
+import DashboardLayout from './layouts/DashboardLayout'
+import EditManagement from './pages/EditManagement/EditManagement'
+import { selectIsAuthenticated } from './store/slices/authSlice'
+
+// Protected Route Component
+function ProtectedRoute({ children }) {
+  const isAuthenticated = useSelector(selectIsAuthenticated)
+  return isAuthenticated ? children : <Navigate to="/" replace />
+}
+
+// Public Route Component (redirects to dashboard if already authenticated)
+function PublicRoute({ children }) {
+  const isAuthenticated = useSelector(selectIsAuthenticated)
+  return !isAuthenticated ? children : <Navigate to="/dashboard" replace />
+}
 
 function App() {
   return (
-    <ToastProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<ClaimsListPage />} />
-            {/* Direct route to claim editor (digitization-first workflow) */}
-            <Route path="claim/:claimId/edit" element={<ClaimEditorPage />} />
-            {/* Keep legacy claim details page for backward compatibility */}
-            <Route path="claim/:claimId" element={<ClaimDetailsPage />} />
-            <Route path="pending" element={<PendingClaimsPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="adjudication/:claimId" element={<AdjudicationPage />} />
-            <Route path="adjudication/result/:claimId" element={<AdjudicationResultPage />} />
-          </Route>
-        </Routes>
-      </Router>
-    </ToastProvider>
-  );
+    <Router>
+      <Routes>
+        {/* Public Routes */}
+        <Route
+          path="/"
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          }
+        />
+        {/* Dashboard Routes - Unprotected for Testing */}
+        <Route
+          path="/dashboard"
+          element={
+            <DashboardLayout>
+              <Dashboard />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/dashboard/edit-management"
+          element={
+            <DashboardLayout>
+              <EditManagement />
+            </DashboardLayout>
+          }
+        />
+
+        {/* Catch-all route - redirect to login */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
+  )
 }
 
 export default App
