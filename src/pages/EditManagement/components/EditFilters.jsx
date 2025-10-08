@@ -19,13 +19,13 @@ const EditFilters = ({ filters, onFilterChange }) => {
   };
 
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-red-400">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {/* Decision Filter */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Decision</label>
           <select
-            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-white text-red-400 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={filters.decision}
             onChange={(e) => onFilterChange({ ...filters, decision: e.target.value })}
           >

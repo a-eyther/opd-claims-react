@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PageHeader from '../../components/common/PageHeader';
 import StatsCard from '../../components/common/StatsCard';
 import SearchBar from '../../components/common/SearchBar';
 import DataTable from '../../components/common/DataTable';
 import EditFilters from './components/EditFilters';
-import { claimsData, statsData } from '../../constants/mockData';
+import { statsData } from '../../constants/mockData';
 import { editManagementColumns } from './constants/columns';
+import axiosInstance from '../../utils/axios';
 
 /**
  * Edit Management Page
@@ -22,16 +23,35 @@ const EditManagement = () => {
     amountMax: ''
   });
 
+  const [claimsData, setClaimsData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchClaims = async () => {
+      setLoading(true);
+      try {
+        const response = await axiosInstance.get('/claims/api/v2/claims/?claim_type=OPD&claim_number&provider_name&scheme_name&start_date&end_date&page=1&ordering'); // Claims List API
+        setClaimsData(response.data.results || response.data);
+      } catch (error) {
+        console.error('Failed to fetch claims:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClaims();
+  }, []);
+
   // Filter data based on search query and filters
   const filteredData = claimsData.filter((claim) => {
     // Search filter
     const query = searchQuery.toLowerCase();
     const matchesSearch = !searchQuery || (
       claim.id.toLowerCase().includes(query) ||
-      claim.visitNumber.toLowerCase().includes(query) ||
-      claim.provider.toLowerCase().includes(query) ||
-      claim.diagnosis.toLowerCase().includes(query) ||
-      claim.benefitName.toLowerCase().includes(query)
+      claim.visit_number?.toLowerCase().includes(query) ||  
+      claim.provider_name?.toLowerCase().includes(query) ||
+      claim.diagnosis?.toLowerCase().includes(query) ||
+      claim.benefit_name?.toLowerCase().includes(query)
     );
 
     // Decision filter
@@ -121,7 +141,7 @@ const EditManagement = () => {
         {showFilters && <EditFilters filters={filters} onFilterChange={setFilters} />}
 
         {/* Data Table */}
-        <DataTable columns={editManagementColumns} data={filteredData} rowsPerPage={10} />
+        <DataTable columns={editManagementColumns} data={filteredData} rowsPerPage={10} loading={loading} />
       </div>
     </div>
   );
