@@ -10,18 +10,17 @@ export const editManagementColumns = [
     sortable: true,
   },
   {
-    key: 'visitNumber',
+    key: 'visit_number',
     header: 'Visit Number',
     sortable: true,
   },
   {
-    key: 'date',
+    key: 'created_at',
     header: 'Date & Time',
     sortable: true,
-    render: (value, row) => (
+    render: (value) => (
       <div>
-        <div className="font-medium">{row.date}</div>
-        <div className="text-xs text-gray-500">{row.time}</div>
+        <div className="font-medium">{value}</div>
       </div>
     ),
   },
@@ -38,7 +37,7 @@ export const editManagementColumns = [
     ),
   },
   {
-    key: 'provider',
+    key: 'provider_name',
     header: 'Provider',
     sortable: true,
   },

@@ -112,7 +112,7 @@ const Login = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Username or Email"
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-md text-[14px] focus:outline-none focus:ring-1 focus:ring-[#5484C7] focus:border-[#5484C7] bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-md text-[14px] focus:outline-none focus:ring-1 focus:ring-[#5484C7] focus:border-[#5484C7] bg-white text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   required
                   disabled={isLoading}
                 />
@@ -132,7 +132,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password"
-                  className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-md text-[14px] focus:outline-none focus:ring-1 focus:ring-[#5484C7] focus:border-[#5484C7] bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-md text-[14px] focus:outline-none focus:ring-1 focus:ring-[#5484C7] focus:border-[#5484C7] bg-white text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   required
                   disabled={isLoading}
                 />
