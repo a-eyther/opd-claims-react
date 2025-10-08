@@ -13,6 +13,8 @@ import ReviewTab from './components/ReviewTab'
 import ActionBar from './components/ActionBar'
 import QueryManagementModal from '../../components/modals/QueryManagementModal'
 import { getClaimDetailsById } from '../../constants/mockData'
+import claimsService from '../../services/claimsService'
+import { transformClaimExtractionData } from '../../utils/transformClaimData'
 
 /**
  * Patient Claim Info Page
@@ -24,9 +26,49 @@ const PatientClaimInfo = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [isQueryModalOpen, setIsQueryModalOpen] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(180) // 3 minutes in seconds
+  const [claimData, setClaimData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  // Fetch claim data - replace with actual API call
-  const claimData = getClaimDetailsById(claimId) || {}
+  // Fetch claim extraction data from API
+  useEffect(() => {
+    const fetchClaimData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        // TODO: Remove static claim ID after testing
+        const staticClaimId = 'VIT-20251006181925-5d0ad925'
+        console.log('Fetching claim extraction data for:', staticClaimId, '(static ID for testing)')
+        const response = await claimsService.getClaimExtractionData(staticClaimId)
+        console.log('API Response:', response)
+
+        const transformedData = transformClaimExtractionData(response)
+        console.log('Transformed Data:', transformedData)
+
+        if (transformedData) {
+          setClaimData(transformedData)
+        } else {
+          // Fallback to mock data if transformation fails
+          console.warn('Transformation failed, using mock data')
+          setClaimData(getClaimDetailsById(claimId) || {})
+        }
+      } catch (err) {
+        console.error('Error fetching claim data:', err)
+        setError(err.message || 'Failed to load claim data')
+
+        // Fallback to mock data on error
+        console.warn('API call failed, using mock data')
+        setClaimData(getClaimDetailsById(claimId) || {})
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (claimId) {
+      fetchClaimData()
+    }
+  }, [claimId])
 
   // Timer countdown effect
   useEffect(() => {
@@ -60,6 +102,52 @@ const PatientClaimInfo = () => {
     setIsQueryModalOpen(true)
   }
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading claim data...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state (with fallback to mock data already handled in useEffect)
+  if (error && !claimData) {
+    return (
+      <div className="h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-600 mb-4">
+            <svg className="w-16 h-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Claim Data</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // No data state
+  if (!claimData) {
+    return (
+      <div className="h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">No claim data available</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
       {/* Header */}
@@ -70,11 +158,11 @@ const PatientClaimInfo = () => {
         timeRemaining={timeRemaining}
         financials={claimData.financials}
       />
-  {console.log(claimData)}
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Section - Document Viewer (40%) */}
         <div className="w-[40%] bg-white border-r border-gray-200 flex flex-col overflow-hidden">
+          {console.log('PatientClaimInfo - Document URL being passed:', claimData.document?.url)}
           <DocumentViewer
             documentUrl={claimData.document?.url}
             document={claimData.document}

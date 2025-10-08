@@ -1,9 +1,5 @@
-import { useState } from 'react'
-import { Document, Page, pdfjs } from 'react-pdf'
+import { useState, useEffect, useMemo } from 'react'
 import { ZoomInIcon, ZoomOutIcon, RotateIcon, DownloadIcon, DocumentIcon, ChevronDownIcon } from '../icons'
-
-// Configure PDF.js worker - use CDN with specific version
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
 /**
  * Document Viewer Component
@@ -15,6 +11,58 @@ const DocumentViewer = ({ documentUrl, document, currentPage, totalPages, onPage
   const [numPages, setNumPages] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [PdfDocument, setPdfDocument] = useState(null)
+  const [PdfPage, setPdfPage] = useState(null)
+
+  // Check if documentUrl is valid first - MUST be memoized
+  const isValidPdfUrl = useMemo(() => {
+    const isValid = Boolean(
+      documentUrl &&
+      documentUrl !== 'Not Available' &&
+      documentUrl !== 'Not Found' &&
+      documentUrl !== '' &&
+      documentUrl !== null &&
+      typeof documentUrl === 'string' &&
+      documentUrl.length > 0 &&
+      (documentUrl.startsWith('http') || documentUrl.startsWith('/'))
+    )
+    console.log('isValidPdfUrl check:', { documentUrl, isValid })
+    return isValid
+  }, [documentUrl])
+
+  // Memoized file object for PDF
+  const pdfFile = useMemo(() => {
+    if (!isValidPdfUrl || !documentUrl) return null
+    return { url: documentUrl }
+  }, [isValidPdfUrl, documentUrl])
+
+  // Memoized options for PDF
+  const pdfOptions = useMemo(() => ({
+    cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
+    cMapPacked: true,
+  }), [])
+
+  // Only load react-pdf if we have a valid URL
+  useEffect(() => {
+    if (isValidPdfUrl && !PdfDocument) {
+      console.log('Loading PDF library for URL:', documentUrl)
+      import('react-pdf').then(({ Document, Page, pdfjs }) => {
+        // Configure PDF.js worker
+        pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+        setPdfDocument(() => Document)
+        setPdfPage(() => Page)
+        console.log('PDF library loaded successfully')
+      }).catch(err => {
+        console.error('Failed to load PDF library:', err)
+        setError('Failed to load PDF library')
+      })
+    } else if (!isValidPdfUrl && PdfDocument) {
+      // Clear PDF components if URL becomes invalid
+      console.log('Clearing PDF library - URL is invalid')
+      setPdfDocument(null)
+      setPdfPage(null)
+    }
+  }, [isValidPdfUrl, PdfDocument, documentUrl])
 
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, 200))
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 25, 50))
@@ -37,6 +85,31 @@ const DocumentViewer = ({ documentUrl, document, currentPage, totalPages, onPage
     setError(null)
   }
 
+  // Helper function to shorten long file names
+  const shortenFileName = (fileName, maxLength = 20) => {
+    if (!fileName || fileName.length <= maxLength) return fileName
+
+    // Get file extension
+    const lastDotIndex = fileName.lastIndexOf('.')
+    const extension = lastDotIndex > 0 ? fileName.substring(lastDotIndex) : ''
+    const nameWithoutExt = lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName
+
+    // Calculate how many characters to show from start and end
+    const charsToShow = maxLength - extension.length - 3 // 3 for "..."
+    const startChars = Math.ceil(charsToShow / 2)
+    const endChars = Math.floor(charsToShow / 2)
+
+    return `${nameWithoutExt.substring(0, startChars)}...${nameWithoutExt.substring(nameWithoutExt.length - endChars)}${extension}`
+  }
+
+  // Debug log - show what we received
+  console.log('DocumentViewer received:', {
+    documentUrl,
+    documentExists: !!document,
+    isValidPdfUrl,
+    PdfLoaded: !!PdfDocument
+  })
+
   if (!document) {
     return (
       <div className="flex items-center justify-center h-full text-gray-400">
@@ -46,6 +119,7 @@ const DocumentViewer = ({ documentUrl, document, currentPage, totalPages, onPage
   }
 
   const displayPages = totalPages || 10
+  const shortFileName = shortenFileName(document.name || 'Document', 25)
 
   return (
     <div className="flex flex-col h-full">
@@ -62,8 +136,11 @@ const DocumentViewer = ({ documentUrl, document, currentPage, totalPages, onPage
             <div className="flex items-center gap-1.5">
               <span className="text-sm text-gray-700">1</span>
               <DocumentIcon className="w-3.5 h-3.5 text-red-500" />
-              <select className="px-2 py-0.5 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-700">
-                <option>{document.name || 'Doc.h344453...'}</option>
+              <select
+                className="px-2 py-0.5 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-700 max-w-[200px]"
+                title={document.name || 'Document'}
+              >
+                <option>{shortFileName}</option>
               </select>
               <ChevronDownIcon className="w-3 h-3 text-gray-400" />
             </div>
@@ -126,43 +203,47 @@ const DocumentViewer = ({ documentUrl, document, currentPage, totalPages, onPage
 
       {/* Document Display Area */}
       <div className="flex-1 overflow-auto bg-gray-100 p-6">
-        {documentUrl ? (
+        {isValidPdfUrl && PdfDocument && PdfPage ? (
           /* PDF Viewer */
           <div className="h-full flex items-center justify-center overflow-auto">
-            <div
-              className="transition-all duration-300"
-              style={{
-                transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-                transformOrigin: 'center center'
-              }}
-            >
-              {loading && (
-                <div className="text-gray-600">Loading PDF...</div>
-              )}
-              {error && (
-                <div className="text-red-600">
-                  <p>Failed to load PDF</p>
-                  <p className="text-sm">{error}</p>
-                </div>
-              )}
-              <Document
-                file={documentUrl}
-                onLoadSuccess={onDocumentLoadSuccess}
-                onLoadError={onDocumentLoadError}
-                loading={<div className="text-gray-600">Loading PDF...</div>}
-                error={<div className="text-red-600">Failed to load PDF file</div>}
-                className="flex justify-center"
+            {loading && !error && (
+              <div className="text-gray-600">Loading PDF...</div>
+            )}
+            {error && (
+              <div className="text-center text-red-600 p-4 bg-red-50 rounded">
+                <p className="font-semibold">Failed to load PDF</p>
+                <p className="text-sm mt-2">{error}</p>
+              </div>
+            )}
+            {!loading && !error && pdfFile && (
+              <div
+                className="transition-all duration-300"
+                style={{
+                  transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
+                  transformOrigin: 'center center'
+                }}
               >
-                <Page
-                  pageNumber={currentPage}
-                  height={700}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                  className="shadow-lg"
-                  loading={<div className="text-gray-400">Loading page...</div>}
-                />
-              </Document>
-            </div>
+                <PdfDocument
+                  file={pdfFile}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  onLoadError={onDocumentLoadError}
+                  onLoadStart={onDocumentLoadStart}
+                  loading={<div className="text-gray-600">Loading PDF...</div>}
+                  error={<div className="text-red-600">Failed to load PDF file</div>}
+                  className="flex justify-center"
+                  options={pdfOptions}
+                >
+                  <PdfPage
+                    pageNumber={currentPage}
+                    height={700}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                    className="shadow-lg"
+                    loading={<div className="text-gray-400">Loading page...</div>}
+                  />
+                </PdfDocument>
+              </div>
+            )}
           </div>
         ) : (
           /* Document Display */
@@ -179,7 +260,7 @@ const DocumentViewer = ({ documentUrl, document, currentPage, totalPages, onPage
                 <div className="pb-3 border-b border-gray-200">
                   <div className="flex items-center gap-2 text-xs text-gray-500 mb-1.5">
                     <DocumentIcon className="w-3 h-3" />
-                    <span>{document.name} - Page {currentPage}</span>
+                    <span className="truncate" title={document.name}>{shortFileName} - Page {currentPage}</span>
                   </div>
                   <h4 className="text-base font-bold text-gray-900">{document.type}</h4>
                 </div>
