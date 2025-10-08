@@ -1,5 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
+import diagnosisReducer from './slices/diagnosisSlice';
+import symptomsReducer from './slices/symptomsSlice';
 
 /**
  * Configure Redux store
@@ -8,6 +10,8 @@ import authReducer from './slices/authSlice';
 const store = configureStore({
   reducer: {
     auth: authReducer,
+    diagnosis: diagnosisReducer,
+    symptoms: symptomsReducer,
     // Add other reducers here as your app grows
     // e.g., user: userReducer,
     //       posts: postsReducer,

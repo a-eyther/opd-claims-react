@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import DashboardLayout from './layouts/DashboardLayout'
 import EditManagement from './pages/EditManagement/EditManagement'
+import PatientClaimInfo from './pages/PatientClaimInfo/PatientClaimInfo'
 import { selectIsAuthenticated } from './store/slices/authSlice'
 
 // Protected Route Component
@@ -47,6 +48,12 @@ function App() {
               <EditManagement />
             </DashboardLayout>
           }
+        />
+
+        {/* Full-page routes without sidebar */}
+        <Route
+          path="/claim/:claimId"
+          element={<PatientClaimInfo />}
         />
 
         {/* Catch-all route - redirect to login */}
