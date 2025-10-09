@@ -32,28 +32,36 @@ function App() {
             </PublicRoute>
           }
         />
-        {/* Dashboard Routes - Unprotected for Testing */}
+        {/* Protected Dashboard Routes */}
         <Route
           path="/dashboard"
           element={
-            <DashboardLayout>
-              <Dashboard />
-            </DashboardLayout>
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Dashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/dashboard/edit-management"
           element={
-            <DashboardLayout>
-              <EditManagement />
-            </DashboardLayout>
+            <ProtectedRoute>
+              <DashboardLayout>
+                <EditManagement />
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
 
-        {/* Full-page routes without sidebar */}
+        {/* Protected Full-page routes without sidebar */}
         <Route
           path="/claim/:claimId"
-          element={<PatientClaimInfo />}
+          element={
+            <ProtectedRoute>
+              <PatientClaimInfo />
+            </ProtectedRoute>
+          }
         />
 
         {/* Catch-all route - redirect to login */}
