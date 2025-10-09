@@ -37,10 +37,8 @@ const PatientClaimInfo = () => {
         setLoading(true)
         setError(null)
 
-        // TODO: Remove static claim ID after testing
-        const staticClaimId = 'VIT-20251006181925-5d0ad925'
-        console.log('Fetching claim extraction data for:', staticClaimId, '(static ID for testing)')
-        const response = await claimsService.getClaimExtractionData(staticClaimId)
+        console.log('Fetching claim extraction data for:', claimId)
+        const response = await claimsService.getClaimExtractionData(claimId)
         console.log('API Response:', response)
 
         const transformedData = transformClaimExtractionData(response)

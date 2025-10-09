@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/common/PageHeader';
 import StatsCard from '../../components/common/StatsCard';
 import SearchBar from '../../components/common/SearchBar';
@@ -13,6 +14,7 @@ import axiosInstance from '../../utils/axios';
  * Displays claims data with stats, search, and table
  */
 const EditManagement = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -69,6 +71,12 @@ const EditManagement = () => {
     return matchesSearch && matchesDecision && matchesProvider && matchesBenefitType;
   });
 
+  // Handle row click - navigate to PatientClaimInfo with claim_unique_id
+  const handleRowClick = (claim) => {
+    if (claim.claim_unique_id) {
+      navigate(`/claim/${claim.claim_unique_id}`);
+    }
+  };
 
   return (
     <div>
@@ -141,7 +149,13 @@ const EditManagement = () => {
         {showFilters && <EditFilters filters={filters} onFilterChange={setFilters} />}
 
         {/* Data Table */}
-        <DataTable columns={editManagementColumns} data={filteredData} rowsPerPage={10} loading={loading} />
+        <DataTable
+          columns={editManagementColumns}
+          data={filteredData}
+          rowsPerPage={10}
+          loading={loading}
+          onRowClick={handleRowClick}
+        />
       </div>
     </div>
   );
