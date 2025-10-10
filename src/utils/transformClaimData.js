@@ -52,6 +52,26 @@ export const transformClaimExtractionData = (apiResponse) => {
     }))
     .filter(d => d.text && d.text !== 'Not Available') || []
 
+//     const vitrayaDiagnoses = output_data?.medical_info?.diagnosis
+//         ?.map(d => ({
+//             source: 'Vitraya',
+//             text: getValue(d.diagnosis_name),
+//             code: getValue(d.icd_code, '')
+//         }))
+//         .filter(d => d.text && d.text !== 'Not Available') || []
+//
+//     const lctDiagnoses = data?.lct_claim_request?.claim_data?.treatment_info?.diagnosis_list
+//         ?.map(d => ({
+//             source: 'LCT',
+//             text: getValue(d.name),
+//             code: getValue(d.icd_code, '')
+//         }))
+//         .filter(d => d.text && d.text !== 'Not Available') || []
+//
+// // merge both lists
+//     const diagnoses = [...lctDiagnoses, ...vitrayaDiagnoses]
+
+
   // Calculate total requested amount
   const totalRequested = output_data?.billing_details?.total_req_amount?.value || claim_details?.request_amount || 0
   const totalApproved = approved_amount || 0

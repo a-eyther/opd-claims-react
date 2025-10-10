@@ -9,10 +9,11 @@ const initialState = {
   loading: false,
   error: null,
   query: '',
-  selectedSymptoms: [
-    'Severe abdominal pain',
-    'Nausea and vomiting'
-  ],
+  // selectedSymptoms: [
+  //   'Severe abdominal pain',
+  //   'Nausea and vomiting'
+  // ],
+    selectedSymptoms: [],
 }
 
 /**

@@ -4,7 +4,7 @@
  */
 const ClaimDetails = ({ claim }) => {
   return (
-    <div className="bg-white rounded-lg border border-gray-200  p-5">
+    <div className="bg-white text-black rounded-lg border border-gray-200  p-5">
       <h3 className="text-base font-semibold mb-4">Claim Details</h3>
       <div className="space-y-3">
         <div>
