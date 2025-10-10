@@ -7,7 +7,7 @@ import {
   selectSelectedDiagnoses,
   addSelectedDiagnosis,
   removeSelectedDiagnosis,
-  clearResults as clearDiagnosisResults,
+  clearResults as clearDiagnosisResults
 } from '../../../store/slices/diagnosisSlice'
 import {
   searchSymptoms,
@@ -16,7 +16,7 @@ import {
   selectSelectedSymptoms,
   addSelectedSymptom,
   removeSelectedSymptom,
-  clearResults as clearSymptomsResults,
+  clearResults as clearSymptomsResults
 } from '../../../store/slices/symptomsSlice'
 
 /**
@@ -245,7 +245,7 @@ const DigitisationTab = ({ digitisationData = {} }) => {
             onChange={(e) => handleSymptomsSearchChange(e.target.value)}
             onFocus={() => symptomSearch.length >= 2 && setShowSymptomsDropdown(true)}
             placeholder="Search symptoms..."
-            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 text-black rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           <span className="absolute right-3 top-2.5 text-gray-400">
             {loadingSymptoms ? (
@@ -322,7 +322,7 @@ const DigitisationTab = ({ digitisationData = {} }) => {
             onChange={(e) => handleDiagnosisSearchChange(e.target.value)}
             onFocus={() => diagnosisSearch.length >= 2 && setShowDiagnosisDropdown(true)}
             placeholder="Search Diagnosis..."
-            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 text-black rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           <span className="absolute right-3 top-2.5 text-gray-400">
             {loadingDiagnoses ? (
@@ -395,7 +395,7 @@ const DigitisationTab = ({ digitisationData = {} }) => {
             {/* Invoice Header */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <select className="px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <select className="px-3 py-1.5 border border-gray-300 text-black rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
                   <option>{invoice.invoiceNumber}</option>
                 </select>
                 {validatedInvoices[invoiceIndex] && (
@@ -424,7 +424,7 @@ const DigitisationTab = ({ digitisationData = {} }) => {
                     <th className="px-3 py-2 text-left font-semibold text-gray-600">DEL</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200 text-black">
                   {invoice.items?.map((item, itemIndex) => (
                     <tr key={itemIndex} className="hover:bg-gray-50">
                       <td className="px-3 py-3">

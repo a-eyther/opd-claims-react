@@ -9,9 +9,10 @@ const initialState = {
   loading: false,
   error: null,
   query: '',
-  selectedDiagnoses: [
-    { text: 'Acute gastric ulcer with hemorrhage', code: 'K25.1' }
-  ],
+  // selectedDiagnoses: [
+  //   { text: 'Acute gastric ulcer with hemorrhage', code: 'K25.1' }
+  // ],
+    selectedDiagnoses: [],
 }
 
 /**

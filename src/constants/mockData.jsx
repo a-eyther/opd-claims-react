@@ -147,7 +147,7 @@ export const claimDetailsData = {
       totalRequested: 23000,
       preAuthAmount: 25000,
       approved: 22500,
-      totalSavings: 0,
+      // totalSavings: 0,
       totalInvoiced: 12200,
       totalApproved: 10200,
       totalSavings: 2000

@@ -86,6 +86,16 @@ const claimsService = {
     })
     return response.data
   },
+
+  /**
+   * Get claim extraction data by claim ID
+   * @param {string} claimId - Claim ID
+   * @returns {Promise} API response with extraction data
+   */
+  getClaimExtractionData: async (claimId) => {
+    const response = await axiosInstance.get(`/claims/api/claims/VIT-20251006181925-5d0ad925/extraction-data/`)
+    return response.data
+  },
 }
 
 export default claimsService

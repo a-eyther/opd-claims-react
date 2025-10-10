@@ -15,7 +15,7 @@ const TabNavigation = ({ activeTab, onTabChange, tabs }) => {
             disabled={tab.locked}
             className={`m-1 px-2 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === tab.id
-                ? 'bg-white rounded-md shadow-xl'
+                ? 'text-black rounded-md shadow-xl'
                 : tab.locked
                 ? 'border-transparent text-gray-400 cursor-not-allowed'
                 : 'border-transparent text-gray-600 hover:text-gray-900'
