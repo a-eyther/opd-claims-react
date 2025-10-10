@@ -8,10 +8,27 @@ import { useState } from 'react';
  * @param {number} props.rowsPerPage - Rows per page for pagination
  * @param {Function} props.onRowClick - Optional callback when row is clicked
  * @param {boolean} props.loading - Loading state
+ * @param {number} props.currentPage - Current page (server-side pagination)
+ * @param {number} props.totalPages - Total pages (server-side pagination)
+ * @param {Function} props.onPageChange - Page change callback (server-side pagination)
  */
-const DataTable = ({ columns, data, rowsPerPage = 10, onRowClick, loading = false }) => {
-  const [currentPage, setCurrentPage] = useState(1);
+const DataTable = ({
+  columns,
+  data,
+  rowsPerPage = 10,
+  onRowClick,
+  loading = false,
+  currentPage: externalCurrentPage,
+  totalPages: externalTotalPages,
+  onPageChange
+}) => {
+  const [internalCurrentPage, setInternalCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+  // Use external pagination if provided, otherwise use internal
+  const isServerPagination = onPageChange !== undefined;
+  const currentPage = isServerPagination ? externalCurrentPage : internalCurrentPage;
+  const setCurrentPage = isServerPagination ? onPageChange : setInternalCurrentPage;
 
   // Sorting logic
   const sortedData = [...data].sort((a, b) => {
@@ -26,9 +43,8 @@ const DataTable = ({ columns, data, rowsPerPage = 10, onRowClick, loading = fals
   });
 
   // Pagination
-  const totalPages = Math.ceil(sortedData.length / rowsPerPage);
-  const startIndex = (currentPage - 1) * rowsPerPage;
-  const paginatedData = sortedData.slice(startIndex, startIndex + rowsPerPage);
+  const totalPages = isServerPagination ? externalTotalPages : Math.ceil(sortedData.length / rowsPerPage);
+  const paginatedData = isServerPagination ? sortedData : sortedData.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   const handleSort = (key) => {
     setSortConfig((prev) => ({
