@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import claimsService from '../../../services/claimsService';
 
 /**
  * Edit Filters Component
@@ -9,13 +10,78 @@ const EditFilters = ({ filters, onFilterChange }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
 
+  // Dropdown options state
+  const [dropdownOptions, setDropdownOptions] = useState({
+    providers: [],
+    benefitTypes: [],
+    decisions: []
+  });
+  const [loading, setLoading] = useState(true);
+
+  // Fetch dropdown options on component mount
+  useEffect(() => {
+    const fetchDropdownOptions = async () => {
+      try {
+        setLoading(true);
+        const response = await claimsService.getDropdownOptions();
+ 
+        if (response.success && response.data) {
+          setDropdownOptions({
+            providers: response.data.providers || [],
+            benefitTypes: response.data.benefit_types || [],
+            decisions: response.data.decisions || []
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch dropdown options:', error);
+        // Keep empty arrays as fallback
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDropdownOptions();
+  }, []);
+
   const handleDateRangeChange = (value) => {
     setDateRange(value);
     if (value === 'Custom Range') {
       setShowDatePicker(true);
     } else {
       setShowDatePicker(false);
+      // Calculate date range for preset options
+      const today = new Date();
+      let startDate = '';
+      let endDate = '';
+
+      if (value !== 'All Time') {
+        endDate = today.toISOString().split('T')[0]; // Today in YYYY-MM-DD
+
+        if (value === 'Today') {
+          startDate = endDate;
+        } else if (value === 'Last 7 Days') {
+          const last7Days = new Date(today);
+          last7Days.setDate(last7Days.getDate() - 7);
+          startDate = last7Days.toISOString().split('T')[0];
+        } else if (value === 'Last 30 Days') {
+          const last30Days = new Date(today);
+          last30Days.setDate(last30Days.getDate() - 30);
+          startDate = last30Days.toISOString().split('T')[0];
+        }
+      }
+
+      // Update filters with calculated dates
+      onFilterChange({ ...filters, startDate, endDate });
     }
+  };
+
+  const handleCustomDateApply = () => {
+    setShowDatePicker(false);
+    onFilterChange({
+      ...filters,
+      startDate: customDateRange.start,
+      endDate: customDateRange.end
+    });
   };
 
   return (
@@ -28,12 +94,14 @@ const EditFilters = ({ filters, onFilterChange }) => {
             className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={filters.decision}
             onChange={(e) => onFilterChange({ ...filters, decision: e.target.value })}
+            disabled={loading}
           >
-            <option>All Decisions</option>
-            <option>Approved</option>
-            <option>Rejected</option>
-            <option>Decision Pending</option>
-            <option>Modified & Approved</option>
+            <option value="All Decisions">All Decisions</option>
+            {dropdownOptions.decisions.map((decision) => (
+              <option key={decision.value} value={decision.value}>
+                {decision.label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -44,12 +112,14 @@ const EditFilters = ({ filters, onFilterChange }) => {
             className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={filters.provider}
             onChange={(e) => onFilterChange({ ...filters, provider: e.target.value })}
+            disabled={loading}
           >
-            <option>All Providers</option>
-            <option>MOI Teaching and Referral Hospital</option>
-            <option>Kenyatta National Hospital</option>
-            <option>Aga Khan University Hospital</option>
-            <option>The Nairobi Hospital</option>
+            <option value="All Providers">All Providers</option>
+            {dropdownOptions.providers.map((provider) => (
+              <option key={provider.id} value={provider.name}>
+                {provider.name}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -60,11 +130,14 @@ const EditFilters = ({ filters, onFilterChange }) => {
             className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={filters.benefitType}
             onChange={(e) => onFilterChange({ ...filters, benefitType: e.target.value })}
+            disabled={loading}
           >
-            <option>All Benefit Types</option>
-            <option>OPD</option>
-            <option>DENTAL</option>
-            <option>OPTICAL</option>
+            <option value="All Benefit Types">All Benefit Types</option>
+            {dropdownOptions.benefitTypes.map((benefitType) => (
+              <option key={benefitType.value} value={benefitType.value}>
+                {benefitType.label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -106,7 +179,7 @@ const EditFilters = ({ filters, onFilterChange }) => {
               </div>
               <div className="pt-2">
                 <button
-                  onClick={() => setShowDatePicker(false)}
+                  onClick={handleCustomDateApply}
                   className="w-full px-3 py-1.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-colors"
                 >
                   Apply

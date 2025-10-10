@@ -97,6 +97,15 @@ const claimsService = {
   const response = await axiosInstance.get(`/claims/api/claims/${claimId}/extraction-data/`)
     return response.data
   },
+
+  /**
+   * Get dropdown options for filters
+   * @returns {Promise} API response with providers, benefit_types, and decisions
+   */
+  getDropdownOptions: async () => {
+    const response = await axiosInstance.get('/claims/api/dropdown-options/')
+    return response.data
+  },
 }
 
 export default claimsService

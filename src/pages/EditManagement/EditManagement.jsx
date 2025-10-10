@@ -5,7 +5,6 @@ import StatsCard from '../../components/common/StatsCard';
 import SearchBar from '../../components/common/SearchBar';
 import DataTable from '../../components/common/DataTable';
 import EditFilters from './components/EditFilters';
-import { statsData } from '../../constants/mockData';
 import { editManagementColumns } from './constants/columns';
 import axiosInstance from '../../utils/axios';
 
@@ -22,54 +21,111 @@ const EditManagement = () => {
     provider: 'All Providers',
     benefitType: 'All Benefit Types',
     amountMin: '',
-    amountMax: ''
+    amountMax: '',
+    startDate: '',
+    endDate: ''
   });
 
   const [claimsData, setClaimsData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState({
+    totalClaims: 0,
+    editDone: 0,
+    editPending: 0
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize] = useState(10);
 
-  useEffect(() => {
-    const fetchClaims = async () => {
-      setLoading(true);
-      try {
-        const response = await axiosInstance.get('/claims/api/v2/claims/?claim_type=OPD&claim_number&provider_name&scheme_name&start_date&end_date&page=1&ordering'); // Claims List API
-        setClaimsData(response.data.results || response.data);
-      } catch (error) {
-        console.error('Failed to fetch claims:', error);
-      } finally {
-        setLoading(false);
+  // Fetch claims with filters
+  const fetchClaims = async () => {
+    setLoading(true);
+    try {
+      // Build query parameters
+      const params = new URLSearchParams();
+
+      // Always include claim_type
+      params.append('claim_type', 'OPD');
+
+      // Add search query if present
+      if (searchQuery.trim()) {
+        params.append('search', searchQuery.trim());
       }
-    };
 
+      // Add decision filter (final_decision in API)
+      if (filters.decision && filters.decision !== 'All Decisions') {
+        params.append('final_decision', filters.decision);
+      }
+
+      // Add provider filter (provider_name in API)
+      if (filters.provider && filters.provider !== 'All Providers') {
+        params.append('provider_name', filters.provider);
+      }
+
+      // Add benefit type filter (benefit_name in API)
+      if (filters.benefitType && filters.benefitType !== 'All Benefit Types') {
+        params.append('benefit_name', filters.benefitType);
+      }
+
+      // Add date range filters
+      if (filters.startDate) {
+        params.append('start_date', filters.startDate);
+      }
+      if (filters.endDate) {
+        params.append('end_date', filters.endDate);
+      }
+
+      // Add pagination
+      params.append('page', currentPage.toString());
+      params.append('page_size', pageSize.toString());
+
+      const response = await axiosInstance.get(`/claims/api/v2/claims/?${params.toString()}`);
+      const claims = response.data.results || response.data;
+      setClaimsData(claims);
+
+      // Calculate total pages from API count
+      const totalClaims = response.data.count || claims.length;
+      const calculatedTotalPages = Math.ceil(totalClaims / pageSize);
+      setTotalPages(calculatedTotalPages);
+
+      // Use stats from API response
+      setStats({
+        totalClaims,
+        editDone: response.data.edit_done_count || 0,
+        editPending: response.data.edit_pending_count || 0
+      });
+    } catch (error) {
+      console.error('Failed to fetch claims:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
     fetchClaims();
   }, []);
 
-  // Filter data based on search query and filters
-  const filteredData = claimsData.filter((claim) => {
-    // Search filter
-    const query = searchQuery.toLowerCase();
-    const matchesSearch = !searchQuery || (
-      claim.id.toLowerCase().includes(query) ||
-      claim.visit_number?.toLowerCase().includes(query) ||  
-      claim.provider_name?.toLowerCase().includes(query) ||
-      claim.diagnosis?.toLowerCase().includes(query) ||
-      claim.benefit_name?.toLowerCase().includes(query)
-    );
+  // Refetch when filters change (immediate) - reset to page 1
+  useEffect(() => {
+    setCurrentPage(1);
+    fetchClaims();
+  }, [filters]);
 
-    // Decision filter
-    const matchesDecision = filters.decision === 'All Decisions' ||
-      claim.decision === filters.decision;
+  // Refetch when search changes (debounced) - reset to page 1
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setCurrentPage(1);
+      fetchClaims();
+    }, 500); // 500ms debounce
 
-    // Provider filter
-    const matchesProvider = filters.provider === 'All Providers' ||
-      claim.provider === filters.provider;
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
-    // Benefit Type filter
-    const matchesBenefitType = filters.benefitType === 'All Benefit Types' ||
-      claim.benefitType === filters.benefitType;
-
-    return matchesSearch && matchesDecision && matchesProvider && matchesBenefitType;
-  });
+  // Refetch when page changes
+  useEffect(() => {
+    fetchClaims();
+  }, [currentPage]);
 
   // Handle row click - navigate to PatientClaimInfo with claim_unique_id
   const handleRowClick = (claim) => {
@@ -89,7 +145,7 @@ const EditManagement = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <StatsCard
             label="Total Claims"
-            value={statsData.totalClaims}
+            value={stats.totalClaims}
             icon={
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -99,7 +155,7 @@ const EditManagement = () => {
           />
           <StatsCard
             label="Edit Done"
-            value={statsData.editDone}
+            value={stats.editDone}
             icon={
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -109,7 +165,7 @@ const EditManagement = () => {
           />
           <StatsCard
             label="Edit Pending"
-            value={statsData.editPending}
+            value={stats.editPending}
             icon={
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -151,10 +207,13 @@ const EditManagement = () => {
         {/* Data Table */}
         <DataTable
           columns={editManagementColumns}
-          data={filteredData}
-          rowsPerPage={10}
+          data={claimsData}
+          rowsPerPage={pageSize}
           loading={loading}
           onRowClick={handleRowClick}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
         />
       </div>
     </div>
