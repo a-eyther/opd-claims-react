@@ -57,7 +57,7 @@ const PatientClaimInfo = () => {
 
         // Fallback to mock data on error
         console.warn('API call failed, using mock data')
-        setClaimData(getClaimDetailsById(claimId) || {})
+        //setClaimData(getClaimDetailsById(claimId) || {})
       } finally {
         setLoading(false)
       }

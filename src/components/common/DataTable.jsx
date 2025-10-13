@@ -49,7 +49,7 @@ const DataTable = ({ columns, data, rowsPerPage = 10, onRowClick, loading = fals
                   key={column.key}
                   onClick={() => column.sortable !== false && handleSort(column.key)}
                   className={`
-                    px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider
+                    px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider
                     ${column.sortable !== false ? 'cursor-pointer hover:bg-gray-100' : ''}
                   `}
                 >

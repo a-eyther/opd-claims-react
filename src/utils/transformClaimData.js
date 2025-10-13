@@ -89,7 +89,7 @@ export const transformClaimExtractionData = (apiResponse) => {
     : 'Not Available'
 
   return {
-    claimId: getValue(claim_details?.claim_number, data.claim_unique_id),
+    claimId: getValue(claim_details?.claim_unique_id, data.claim_unique_id),
     status: getValue(claim_details?.status, 'PENDING'),
     benefitType: getValue(claim_details?.benefit_name, getValue(claim_details?.claim_type, 'OPD')),
     timer: '03:00', // Timer not in API
