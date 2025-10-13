@@ -93,7 +93,7 @@ const claimsService = {
    * @returns {Promise} API response with extraction data
    */
   getClaimExtractionData: async (claimId) => {
-    const response = await axiosInstance.get(`/claims/api/claims/VIT-20251006181925-5d0ad925/extraction-data/`)
+    const response = await axiosInstance.get(`/claims/api/claims/${claimId}/extraction-data/`)
     return response.data
   },
 
@@ -113,7 +113,7 @@ const claimsService = {
    * @returns {Promise} API response
    */
   updateManualAdjudication: async (claimUniqueId, data) => {
-    const response = await axiosInstance.put(`/claims/${claimUniqueId}/adjudication/manual/`, data)
+    const response = await axiosInstance.put(`/claims/api/claims/${claimUniqueId}/adjudication/manual/`, data)
     return response.data
   },
 

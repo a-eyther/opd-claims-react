@@ -147,11 +147,20 @@ export const transformClaimExtractionData = (apiResponse) => {
   const totalRequested = output_data?.billing_details?.total_req_amount?.value || claim_details?.request_amount || 0
   const totalApproved = approved_amount || 0
 
-  // Get document URL from documents array
-  const documentUrl = documents && documents.length > 0 && documents[0].presigned_url
-    ? documents[0].presigned_url
-    : null  // Use null instead of "Not Available" to prevent PDF loading
-  const documentName = documents && documents.length > 0 ? documents[0].file_name : 'Not Available'
+  // Transform all documents from API
+  const transformedDocuments = documents && documents.length > 0
+    ? documents.map(doc => ({
+        name: doc.file_name || 'Document',
+        type: (doc.file_type || 'PDF').toUpperCase(),
+        url: doc.presigned_url || null,
+        fileKey: doc.file_key || ''
+      }))
+    : []
+
+  // Get first document for backward compatibility
+  const firstDocument = transformedDocuments.length > 0 ? transformedDocuments[0] : null
+  const documentUrl = firstDocument?.url || null
+  const documentName = firstDocument?.name || 'Not Available'
 
   // Get policy period from benefits
   const activeBenefit = policy_details?.benefits?.find(b => b.benefitName === claim_details?.benefit_name)
@@ -232,6 +241,9 @@ export const transformClaimExtractionData = (apiResponse) => {
       })) || [],
       totalAmount: totalRequested
     },
+
+    // All documents array
+    documents: transformedDocuments,
 
     invoices: transformedInvoices,
 

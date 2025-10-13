@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import ClaimHeader from './components/ClaimHeader'
 import TabNavigation from './components/TabNavigation'
 import DocumentViewer from '../../components/common/DocumentViewer'
@@ -22,8 +23,14 @@ import { transformClaimExtractionData, transformAdjudicationData } from '../../u
  */
 const PatientClaimInfo = () => {
   const { claimId } = useParams()
+
+  // Get selected symptoms and diagnoses from Redux store
+  const selectedSymptoms = useSelector(state => state.symptoms?.selectedSymptoms || [])
+  const selectedDiagnoses = useSelector(state => state.diagnosis?.selectedDiagnoses || [])
+
   const [activeTab, setActiveTab] = useState('patient-info')
   const [currentPage, setCurrentPage] = useState(1)
+  const [selectedDocumentIndex, setSelectedDocumentIndex] = useState(0)
   const [isQueryModalOpen, setIsQueryModalOpen] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(180) // 3 minutes in seconds
   const [claimData, setClaimData] = useState(null)
@@ -33,6 +40,7 @@ const PatientClaimInfo = () => {
   const [clinicalError, setClinicalError] = useState(null)
   const [rawApiResponse, setRawApiResponse] = useState(null)
   const [clinicalSaveFunction, setClinicalSaveFunction] = useState(null)
+  const [reviewLoading, setReviewLoading] = useState(false)
 
   // Fetch claim extraction data from API
   useEffect(() => {
@@ -141,6 +149,119 @@ const PatientClaimInfo = () => {
     fetchClinicalData()
   }, [activeTab, claimId])
 
+  // Fetch adjudication data when Review tab opens
+  useEffect(() => {
+    const fetchReviewData = async () => {
+      if (activeTab !== 'review' || !claimId) return
+
+      try {
+        setReviewLoading(true)
+        console.log('Fetching adjudication data for Review tab:', claimId)
+
+        // Try to get manual adjudication first
+        let response = await claimsService.getManualAdjudication(claimId)
+        console.log('Review - Manual Adjudication API Response:', response)
+
+        // If manual adjudication fails, fetch AI adjudication
+        if (!response.success) {
+          console.log('Manual adjudication not available for review, fetching AI adjudication...')
+          response = await claimsService.getAIAdjudication(claimId)
+          console.log('Review - AI Adjudication API Response:', response)
+        }
+
+        if (response?.data?.adjudication_response) {
+          const adjudicationResponse = response.data.adjudication_response
+
+          // Transform adjudication response to review format
+          const reviewData = transformAdjudicationToReview(adjudicationResponse, selectedSymptoms, selectedDiagnoses)
+
+          // Update review data
+          setClaimData(prevData => ({
+            ...prevData,
+            reviewData: reviewData
+          }))
+        }
+      } catch (err) {
+        console.error('Error fetching review data:', err)
+        // Keep existing data on error
+      } finally {
+        setReviewLoading(false)
+      }
+    }
+
+    fetchReviewData()
+  }, [activeTab, claimId, selectedSymptoms, selectedDiagnoses])
+
+  // Helper function to transform adjudication response to review format
+  const transformAdjudicationToReview = (adjudicationResponse, userSelectedSymptoms, userSelectedDiagnoses) => {
+    const billingData = adjudicationResponse.billing_data || []
+
+    // Group by invoice
+    const invoiceMap = {}
+    billingData.forEach(item => {
+      const invoiceNumber = item.invoice_number || 'UNKNOWN'
+      if (!invoiceMap[invoiceNumber]) {
+        invoiceMap[invoiceNumber] = {
+          invoiceNumber,
+          items: [],
+          totalSavings: 0,
+          totalInvoiced: 0
+        }
+      }
+
+      const approvedQty = item.approved_quantity !== undefined && item.approved_quantity !== null
+        ? item.approved_quantity
+        : item.quantity || 0
+
+      invoiceMap[invoiceNumber].items.push({
+        category: item.item_category || '',
+        name: item.item_name || '',
+        qty: approvedQty,
+        rate: item.rate || 0,
+        preauthAmount: item.tariff_amount || 0,
+        invoicedAmount: item.request_amount || 0,
+        approvedAmount: item.approved_amount || 0,
+        savings: item.savings || 0,
+        status: item.approved_amount > 0 ? 'Approved' : 'Pending',
+        deductionReasons: (item.deduction_reason || []).join(', ') || '-'
+      })
+
+      invoiceMap[invoiceNumber].totalInvoiced += item.request_amount || 0
+      invoiceMap[invoiceNumber].totalSavings += item.savings || 0
+    })
+
+    // Use user-selected symptoms from Redux store (green labels in Digitisation tab)
+    const symptoms = userSelectedSymptoms.map(s => ({ text: s }))
+
+    // Use user-selected diagnoses from Redux store (green labels in Digitisation tab)
+    const diagnoses = userSelectedDiagnoses.map(d => ({
+      text: d.text,
+      code: d.code || ''
+    }))
+
+    return {
+      symptoms: symptoms,
+      diagnoses: diagnoses,
+      invoices: Object.values(invoiceMap),
+      financialSummary: {
+        totalInvoiced: adjudicationResponse.total_request_amount || 0,
+        totalRequested: adjudicationResponse.total_request_amount || 0,
+        totalApproved: adjudicationResponse.total_allowed_amount || 0,
+        totalSavings: adjudicationResponse.total_savings || 0
+      },
+      productRules: (adjudicationResponse.policy_rules_outcome?.detailed_results || []).map(rule => ({
+        status: rule.status === 'passed' ? 'success' : 'warning',
+        title: rule.category || 'Rule',
+        description: rule.message || ''
+      })),
+      decision: {
+        status: adjudicationResponse.decision?.toLowerCase() || 'pending',
+        title: `Claim ${adjudicationResponse.decision || 'Pending'}`,
+        description: adjudicationResponse.message || 'Awaiting decision'
+      }
+    }
+  }
+
   // Timer countdown effect
   useEffect(() => {
     const interval = setInterval(() => {
@@ -172,10 +293,11 @@ const PatientClaimInfo = () => {
       const success = await clinicalSaveFunction()
       if (success) {
         console.log('Clinical validation data saved successfully')
-        // Optionally navigate to next tab or show success message
+        // Navigate to review tab on success
+        setActiveTab('review')
       } else {
         console.error('Failed to save clinical validation data')
-        // Optionally show error message
+        // Optionally show error message to user
       }
     }
   }
@@ -244,10 +366,11 @@ const PatientClaimInfo = () => {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Section - Document Viewer (40%) */}
         <div className="w-[40%] bg-white border-r border-gray-200 flex flex-col overflow-hidden">
-          {console.log('PatientClaimInfo - Document URL being passed:', claimData.document?.url)}
+          {console.log('PatientClaimInfo - Documents array:', claimData.documents)}
           <DocumentViewer
-            documentUrl={claimData.document?.url}
-            document={claimData.document}
+            documents={claimData.documents || []}
+            selectedDocumentIndex={selectedDocumentIndex}
+            onDocumentChange={setSelectedDocumentIndex}
             currentPage={currentPage}
             totalPages={claimData.totalPages || 10}
             onPageChange={setCurrentPage}

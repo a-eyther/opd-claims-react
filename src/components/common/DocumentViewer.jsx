@@ -5,7 +5,17 @@ import { ZoomInIcon, ZoomOutIcon, RotateIcon, DownloadIcon, DocumentIcon, Chevro
  * Document Viewer Component
  * Displays PDF documents with zoom and navigation controls
  */
-const DocumentViewer = ({ documentUrl, document, currentPage, totalPages, onPageChange }) => {
+const DocumentViewer = ({
+  documents = [],
+  selectedDocumentIndex = 0,
+  onDocumentChange,
+  currentPage,
+  totalPages,
+  onPageChange
+}) => {
+  // Get currently selected document
+  const document = documents[selectedDocumentIndex] || null
+  const documentUrl = document?.url || null
   const [zoom, setZoom] = useState(100)
   const [rotation, setRotation] = useState(0)
   const [numPages, setNumPages] = useState(null)
@@ -104,11 +114,21 @@ const DocumentViewer = ({ documentUrl, document, currentPage, totalPages, onPage
 
   // Debug log - show what we received
   console.log('DocumentViewer received:', {
+    documentsCount: documents.length,
+    selectedDocumentIndex,
     documentUrl,
     documentExists: !!document,
     isValidPdfUrl,
     PdfLoaded: !!PdfDocument
   })
+
+  if (!documents || documents.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full text-gray-400">
+        <p>No documents available</p>
+      </div>
+    )
+  }
 
   if (!document) {
     return (
@@ -134,13 +154,19 @@ const DocumentViewer = ({ documentUrl, document, currentPage, totalPages, onPage
           <div className="flex items-center gap-3">
             <span className="text-xs text-gray-600">Page {currentPage} of {numPages || displayPages}</span>
             <div className="flex items-center gap-1.5">
-              <span className="text-sm text-gray-700">1</span>
+              <span className="text-sm text-gray-700">{documents.length}</span>
               <DocumentIcon className="w-3.5 h-3.5 text-red-500" />
               <select
                 className="px-2 py-0.5 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 text-gray-700 max-w-[200px]"
-                title={document.name || 'Document'}
+                value={selectedDocumentIndex}
+                onChange={(e) => onDocumentChange(Number(e.target.value))}
+                title={document?.name || 'Document'}
               >
-                <option>{shortFileName}</option>
+                {documents.map((doc, index) => (
+                  <option key={index} value={index}>
+                    {shortenFileName(doc.name, 25)}
+                  </option>
+                ))}
               </select>
               <ChevronDownIcon className="w-3 h-3 text-gray-400" />
             </div>
