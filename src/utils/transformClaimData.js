@@ -1,4 +1,81 @@
 /**
+ * Transform adjudication API response to clinical validation format
+ * @param {Object} apiResponse - Raw adjudication API response
+ * @returns {Object} Transformed data for ClinicalValidationTab
+ */
+export const transformAdjudicationData = (apiResponse) => {
+  if (!apiResponse?.data?.adjudication_response) {
+    console.error('Invalid adjudication response:', apiResponse)
+    return null
+  }
+
+  const { adjudication_response } = apiResponse.data
+  const billingData = adjudication_response.billing_data || []
+
+  // Group billing data by invoice number
+  const invoiceMap = {}
+  billingData.forEach(item => {
+    const invoiceNumber = item.invoice_number || 'UNKNOWN'
+    if (!invoiceMap[invoiceNumber]) {
+      invoiceMap[invoiceNumber] = {
+        invoiceNumber: invoiceNumber,
+        invoiceId: item.invoice_id || 'UNKNOWN',
+        items: [],
+        totalInvoiced: 0,
+        totalSavings: 0
+      }
+    }
+
+    const invQty = item.quantity || 1 // Prevent division by zero
+    const invAmt = item.request_amount || 0
+    const unitPrice = invQty > 0 ? invAmt / invQty : 0
+
+    // Use approved_quantity if present, otherwise fall back to quantity
+    const appQty = item.approved_quantity !== undefined && item.approved_quantity !== null
+      ? item.approved_quantity
+      : item.quantity || 0
+
+    invoiceMap[invoiceNumber].items.push({
+      medicineName: item.item_name || '',
+      invQty: invQty,
+      appQty: appQty,
+      unitPrice: unitPrice,
+      preauthAmt: item.tariff_amount || 0,
+      invAmt: invAmt,
+      appAmt: item.approved_amount || 0,
+      savings: item.savings || 0,
+      invoiceNo: invoiceNumber,
+      category: item.item_category || '',
+      systemReason: item.message || '',
+      editorReason: item.editor_reason || '',
+      necessary: item.necessary || 'PENDING',
+      deductionReasons: item.deduction_reason || []
+    })
+
+    invoiceMap[invoiceNumber].totalInvoiced += item.request_amount || 0
+    invoiceMap[invoiceNumber].totalSavings += item.savings || 0
+  })
+
+  const invoices = Object.values(invoiceMap)
+
+  // Calculate financial totals
+  const totalInvoiced = adjudication_response.total_request_amount || 0
+  const totalApproved = adjudication_response.total_allowed_amount || 0
+  const totalSavings = adjudication_response.total_savings || 0
+
+  return {
+    clinicalValidationInvoices: invoices,
+    financials: {
+      totalInvoiced: totalInvoiced,
+      totalRequested: totalInvoiced,
+      totalApproved: totalApproved,
+      totalSavings: totalSavings
+    },
+    adjudicationResponse: adjudication_response
+  }
+}
+
+/**
  * Transform API extraction data to match component structure
  * @param {Object} apiResponse - Raw API response
  * @returns {Object} Transformed data for PatientClaimInfo component
@@ -39,37 +116,31 @@ export const transformClaimExtractionData = (apiResponse) => {
     })) || []
   })) || []
 
-  // Transform symptoms - include "Not Available" if that's what API returns
-  const symptoms = output_data?.medical_info?.symptoms
-    ?.map(s => getValue(s.value))
-    .filter(s => s) || []
+  // Transform symptoms from LCT
+  const symptomsByLCT = data?.lct_claim_request?.claim_data?.treatment_info?.symptom_list
+    ?.map(s => getValue(s.name || s.value))
+    .filter(s => s && s !== 'Not Available') || []
 
-  // Transform diagnoses
-  const diagnoses = output_data?.medical_info?.diagnosis
+  // Transform diagnoses from LCT
+  const diagnosisByLCT = data?.lct_claim_request?.claim_data?.treatment_info?.diagnosis_list
+    ?.map(d => ({
+      text: getValue(d.name),
+      code: getValue(d.icd_code, '')
+    }))
+    .filter(d => d.text && d.text !== 'Not Available') || []
+
+  // Transform symptoms from Vitraya (for selected symptoms)
+  const vitrayaSymptoms = output_data?.medical_info?.symptoms
+    ?.map(s => getValue(s.value))
+    .filter(s => s && s !== 'Not Available') || []
+
+  // Transform diagnoses from Vitraya (for selected diagnoses)
+  const vitrayaDiagnoses = output_data?.medical_info?.diagnosis
     ?.map(d => ({
       text: getValue(d.diagnosis_name),
       code: getValue(d.icd_code, '')
     }))
     .filter(d => d.text && d.text !== 'Not Available') || []
-
-//     const vitrayaDiagnoses = output_data?.medical_info?.diagnosis
-//         ?.map(d => ({
-//             source: 'Vitraya',
-//             text: getValue(d.diagnosis_name),
-//             code: getValue(d.icd_code, '')
-//         }))
-//         .filter(d => d.text && d.text !== 'Not Available') || []
-//
-//     const lctDiagnoses = data?.lct_claim_request?.claim_data?.treatment_info?.diagnosis_list
-//         ?.map(d => ({
-//             source: 'LCT',
-//             text: getValue(d.name),
-//             code: getValue(d.icd_code, '')
-//         }))
-//         .filter(d => d.text && d.text !== 'Not Available') || []
-//
-// // merge both lists
-//     const diagnoses = [...lctDiagnoses, ...vitrayaDiagnoses]
 
 
   // Calculate total requested amount
@@ -166,8 +237,10 @@ export const transformClaimExtractionData = (apiResponse) => {
 
     // Digitisation tab data
     digitisationData: {
-      symptomsByLCT: symptoms,
-      diagnosisByLCT: diagnoses,
+      symptomsByLCT: symptomsByLCT,
+      diagnosisByLCT: diagnosisByLCT,
+      symptomsByVitraya: vitrayaSymptoms,
+      diagnosisByVitraya: vitrayaDiagnoses,
       invoices: transformedInvoices
     },
 
@@ -186,14 +259,16 @@ export const transformClaimExtractionData = (apiResponse) => {
         invoiceNo: invoice.invoiceNumber,
         category: item.category,
         necessary: item.necessary,
-        message: item.message
+        message: item.message,
+        systemReason: item.message, // Map message to systemReason
+        editorReason: '' // Initialize empty editor reason
       }))
     })),
 
     // Review tab data
     reviewData: {
-      symptoms: symptoms.map(s => ({ text: s })),
-      diagnoses: diagnoses,
+      symptoms: vitrayaSymptoms.map(s => ({ text: s })),
+      diagnoses: vitrayaDiagnoses,
       invoices: transformedInvoices.map(invoice => ({
         ...invoice,
         items: invoice.items.map(item => ({

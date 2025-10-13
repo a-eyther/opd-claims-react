@@ -14,7 +14,7 @@ import ActionBar from './components/ActionBar'
 import QueryManagementModal from '../../components/modals/QueryManagementModal'
 import { getClaimDetailsById } from '../../constants/mockData'
 import claimsService from '../../services/claimsService'
-import { transformClaimExtractionData } from '../../utils/transformClaimData'
+import { transformClaimExtractionData, transformAdjudicationData } from '../../utils/transformClaimData'
 
 /**
  * Patient Claim Info Page
@@ -29,6 +29,10 @@ const PatientClaimInfo = () => {
   const [claimData, setClaimData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [clinicalLoading, setClinicalLoading] = useState(false)
+  const [clinicalError, setClinicalError] = useState(null)
+  const [rawApiResponse, setRawApiResponse] = useState(null)
+  const [clinicalSaveFunction, setClinicalSaveFunction] = useState(null)
 
   // Fetch claim extraction data from API
   useEffect(() => {
@@ -40,6 +44,9 @@ const PatientClaimInfo = () => {
         console.log('Fetching claim extraction data for:', claimId)
         const response = await claimsService.getClaimExtractionData(claimId)
         console.log('API Response:', response)
+
+        // Store raw API response for later use
+        setRawApiResponse(response)
 
         const transformedData = transformClaimExtractionData(response)
         console.log('Transformed Data:', transformedData)
@@ -68,6 +75,72 @@ const PatientClaimInfo = () => {
     }
   }, [claimId])
 
+  // Fetch adjudication data when Clinical Validation tab opens
+  useEffect(() => {
+    const fetchClinicalData = async () => {
+      if (activeTab !== 'clinical' || !claimId) return
+
+      try {
+        setClinicalLoading(true)
+        setClinicalError(null)
+        console.log('Fetching adjudication data for Clinical Validation tab:', claimId)
+
+        // Try to get manual adjudication first
+        let response = await claimsService.getManualAdjudication(claimId)
+        console.log('Manual Adjudication API Response:', response)
+
+        // If manual adjudication fails, fetch AI adjudication
+        if (!response.success) {
+          console.log('Manual adjudication not available, fetching AI adjudication...')
+          response = await claimsService.getAIAdjudication(claimId)
+          console.log('AI Adjudication API Response:', response)
+        }
+
+        // Store the adjudication response for later use
+        setRawApiResponse(response)
+
+        const transformedData = transformAdjudicationData(response)
+        console.log('Clinical Validation Transformed Data:', transformedData)
+
+        if (transformedData) {
+          // Update only the clinical validation data
+          setClaimData(prevData => ({
+            ...prevData,
+            clinicalValidationInvoices: transformedData.clinicalValidationInvoices,
+            financials: transformedData.financials
+          }))
+        }
+      } catch (err) {
+        console.error('Error fetching clinical validation data:', err)
+        // If all API calls fail, try AI adjudication as fallback
+        try {
+          console.log('Trying AI adjudication as fallback...')
+          const aiResponse = await claimsService.getAIAdjudication(claimId)
+          console.log('AI Adjudication Fallback Response:', aiResponse)
+
+          setRawApiResponse(aiResponse)
+          const transformedData = transformAdjudicationData(aiResponse)
+
+          if (transformedData) {
+            setClaimData(prevData => ({
+              ...prevData,
+              clinicalValidationInvoices: transformedData.clinicalValidationInvoices,
+              financials: transformedData.financials
+            }))
+          }
+        } catch (fallbackErr) {
+          console.error('Error fetching AI adjudication fallback:', fallbackErr)
+          // Both APIs failed, set error state
+          setClinicalError('Details not found')
+        }
+      } finally {
+        setClinicalLoading(false)
+      }
+    }
+
+    fetchClinicalData()
+  }, [activeTab, claimId])
+
   // Timer countdown effect
   useEffect(() => {
     const interval = setInterval(() => {
@@ -91,9 +164,20 @@ const PatientClaimInfo = () => {
     { id: 'review', label: 'Review' }
   ]
 
-  const handleSave = () => {
-    // Save logic here
+  const handleSave = async () => {
     console.log('Save & Continue clicked')
+
+    // If on clinical tab and there's a save function, call it
+    if (activeTab === 'clinical' && clinicalSaveFunction) {
+      const success = await clinicalSaveFunction()
+      if (success) {
+        console.log('Clinical validation data saved successfully')
+        // Optionally navigate to next tab or show success message
+      } else {
+        console.error('Failed to save clinical validation data')
+        // Optionally show error message
+      }
+    }
   }
 
   const handleQueryClick = () => {
@@ -211,6 +295,11 @@ const PatientClaimInfo = () => {
             <ClinicalValidationTab
               invoices={claimData.clinicalValidationInvoices}
               financials={claimData.financials}
+              loading={clinicalLoading}
+              error={clinicalError}
+              rawApiResponse={rawApiResponse}
+              claimUniqueId={rawApiResponse?.data?.claim_unique_id || claimId}
+              onSave={(saveFunc) => setClinicalSaveFunction(() => saveFunc)}
             />
           )}
 
