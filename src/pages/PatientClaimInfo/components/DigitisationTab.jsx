@@ -229,6 +229,10 @@ const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
     setValidatedInvoices(updated)
   }
 
+  // Debug log to check invoices
+  console.log('DigitisationTab - Invoices:', invoices)
+  console.log('DigitisationTab - digitisationData:', digitisationData)
+
     // const handleSaveInvoices = async () => {
     //     try {
     //         const payload = { output_data: {invoices} }
@@ -399,17 +403,22 @@ const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
 
       {/* Total Invoices Summary */}
       <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <h3 className="text-sm font-bold text-gray-900 mb-2">(3) Total Invoices</h3>
+        <h3 className="text-sm font-bold text-gray-900 mb-2">({invoices?.length || 0}) Total Invoices</h3>
         <div className="flex gap-4 text-xs">
-          <span className="text-green-600">0 Valid</span>
+          <span className="text-green-600">{Object.keys(validatedInvoices).length} Valid</span>
           <span className="text-red-600">0 Invalid</span>
-          <span className="text-yellow-600">3 Pending</span>
+          <span className="text-yellow-600">{(invoices?.length || 0) - Object.keys(validatedInvoices).length} Pending</span>
         </div>
       </div>
 
       {/* Invoice Tables */}
       <div className="space-y-6">
-        {invoices.map((invoice, invoiceIndex) => (
+        {!invoices || invoices.length === 0 ? (
+          <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+            <p className="text-gray-500">No invoices data available</p>
+          </div>
+        ) : (
+          invoices.map((invoice, invoiceIndex) => (
           <div key={invoiceIndex} className="bg-white border border-gray-200 rounded-lg p-5">
             {/* Invoice Header */}
             <div className="flex items-center justify-between mb-4">
@@ -601,7 +610,8 @@ const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
               )}
             </div>
           </div>
-        ))}
+        ))
+        )}
           {/*<div className="flex justify-end">*/}
           {/*    <button*/}
           {/*        onClick={handleSaveInvoices}*/}

@@ -97,8 +97,18 @@ export const transformClaimExtractionData = (apiResponse) => {
     return value
   }
 
+  // Find invoices - check for different possible keys
+  const invoicesData = output_data?.invoices ||
+                       output_data?.['?2_invoices'] ||
+                       output_data?.['2_invoices'] ||
+                       Object.keys(output_data || {}).find(key => key.includes('invoice'))
+                         ? output_data[Object.keys(output_data).find(key => key.includes('invoice'))]
+                         : []
+
+  console.log('Transform - Found invoices data:', invoicesData)
+
   // Transform invoice line items for digitisation tab
-  const transformedInvoices = output_data?.invoices?.map((invoice) => ({
+  const transformedInvoices = invoicesData?.map((invoice) => ({
     invoiceNumber: getValue(invoice.invoice_id) !== 'Not Available' ? invoice.invoice_id : getValue(invoice.invoice_number),
     invoiceDate: getValue(invoice.invoice_date),
     totalAmount: invoice.invoice_total_amount || 0,
@@ -170,6 +180,7 @@ export const transformClaimExtractionData = (apiResponse) => {
 
   return {
     claimId: getValue(claim_details?.claim_unique_id, data.claim_unique_id),
+    claim_id:getValue(claim_details?.id, data.id),
     status: getValue(claim_details?.status, 'PENDING'),
     benefitType: getValue(claim_details?.benefit_name, getValue(claim_details?.claim_type, 'OPD')),
     timer: '03:00', // Timer not in API
@@ -200,9 +211,9 @@ export const transformClaimExtractionData = (apiResponse) => {
 
     claim: {
       hospital: getValue(claim_details?.provider_name),
-      invoiceNumbers: output_data?.invoices?.map(inv => getValue(inv.invoice_id)).join(', ') || 'Not Available',
-      invoiceId: getValue(output_data?.invoices?.[0]?.invoice_id, ''),
-      invoiceDate: getValue(output_data?.invoices?.[0]?.invoice_date, ''),
+      invoiceNumbers: invoicesData?.map(inv => getValue(inv.invoice_id)).join(', ') || 'Not Available',
+      invoiceId: getValue(invoicesData?.[0]?.invoice_id, ''),
+      invoiceDate: getValue(invoicesData?.[0]?.invoice_date, ''),
       vettingStatus: getValue(data?.edit_status, 'Pending Review'),
       visitType: getValue(claim_details?.visit_type, ''),
       claimType: getValue(claim_details?.claim_type, ''),
@@ -230,12 +241,12 @@ export const transformClaimExtractionData = (apiResponse) => {
       fileKey: documents && documents.length > 0 ? documents[0].file_key : 'Not Available',
       details: [
         { label: 'Patient', value: getValue(claim_details?.member_name, '') },
-        { label: 'Invoice', value: getValue(output_data?.invoices?.[0]?.invoice_id, '') },
+        { label: 'Invoice', value: getValue(invoicesData?.[0]?.invoice_id, '') },
         { label: 'Visit No', value: getValue(claim_details?.visit_number, '') },
         { label: 'Hospital', value: getValue(claim_details?.provider_name, '') },
-        { label: 'Date', value: getValue(output_data?.invoices?.[0]?.invoice_date, '') }
+        { label: 'Date', value: getValue(invoicesData?.[0]?.invoice_date, '') }
       ],
-      services: output_data?.invoices?.[0]?.line_items?.map(item => ({
+      services: invoicesData?.[0]?.line_items?.map(item => ({
         name: getValue(item.item_name, ''),
         amount: item.request_amount || 0
       })) || [],

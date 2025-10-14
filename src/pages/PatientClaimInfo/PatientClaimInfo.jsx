@@ -217,13 +217,17 @@ const PatientClaimInfo = () => {
         ? item.approved_quantity
         : item.quantity || 0
 
+      const invoicedAmount = item.request_amount || 0
+      const qty = item.quantity || 1
+      const calculatedRate = qty > 0 ? invoicedAmount / qty : 0
+
       invoiceMap[invoiceNumber].items.push({
         category: item.item_category || '',
         name: item.item_name || '',
         qty: approvedQty,
-        rate: item.rate || 0,
+        rate: calculatedRate,
         preauthAmount: item.tariff_amount || 0,
-        invoicedAmount: item.request_amount || 0,
+        invoicedAmount: invoicedAmount,
         approvedAmount: item.approved_amount || 0,
         savings: item.savings || 0,
         status: item.approved_amount > 0 ? 'Approved' : 'Pending',
@@ -288,6 +292,28 @@ const PatientClaimInfo = () => {
     { id: 'clinical', label: 'Clinical Validation', locked: isClinicalTabLocked },
     { id: 'review', label: 'Review', locked: isReviewTabLocked }
   ]
+
+  // Calculate dynamic financials for Clinical Validation tab
+  const getFinancials = () => {
+    if (activeTab === 'clinical' && claimData?.clinicalValidationInvoices) {
+      // Calculate totals from clinical validation invoices
+      const totals = claimData.clinicalValidationInvoices.reduce((acc, invoice) => {
+        invoice.items?.forEach(item => {
+          acc.totalApproved += parseFloat(item.appAmt) || 0
+          acc.totalSavings += parseFloat(item.savings) || 0
+        })
+        return acc
+      }, { totalApproved: 0, totalSavings: 0 })
+
+      return {
+        ...claimData.financials,
+        approved: totals.totalApproved,
+        totalSavings: totals.totalSavings
+      }
+    }
+
+    return claimData.financials
+  }
   // Updated handleSave with PUT API integration
   const handleSave = async () => {
     if (!claimId) return
@@ -386,13 +412,14 @@ const PatientClaimInfo = () => {
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
+      {/* Header */ console.log(claimData)}
       <ClaimHeader
         claimId={claimData.claimId}
+        claim_id={claimData.claim_id}
         status={claimData.status}
         benefitType={claimData.benefitType}
         timeRemaining={timeRemaining}
-        financials={claimData.financials}
+        financials={getFinancials()}
       />
 
       {/* Main Content */}
