@@ -85,13 +85,13 @@ const EditFilters = ({ filters, onFilterChange }) => {
   };
 
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-red-400">
+    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-black">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {/* Decision Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Decision</label>
+          <label className="block text-sm font-medium mb-2">Decision</label>
           <select
-            className="w-full px-3 py-2 bg-white text-red-400 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={filters.decision}
             onChange={(e) => onFilterChange({ ...filters, decision: e.target.value })}
             disabled={loading}
@@ -107,7 +107,7 @@ const EditFilters = ({ filters, onFilterChange }) => {
 
         {/* Provider Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Provider</label>
+          <label className="block text-sm font-medium mb-2">Provider</label>
           <select
             className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={filters.provider}
@@ -125,7 +125,7 @@ const EditFilters = ({ filters, onFilterChange }) => {
 
         {/* Benefit Type Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Benefit Type</label>
+          <label className="block text-sm font-medium mb-2">Benefit Type</label>
           <select
             className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={filters.benefitType}
@@ -143,7 +143,7 @@ const EditFilters = ({ filters, onFilterChange }) => {
 
         {/* Date Range Filter */}
         <div className="relative">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+          <label className="block text-sm font-medium mb-2">Date Range</label>
           <select
             className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={dateRange}
@@ -191,7 +191,7 @@ const EditFilters = ({ filters, onFilterChange }) => {
 
         {/* Amount Range Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Amount Range</label>
+          <label className="block text-sm font-medium mb-2">Amount Range</label>
           <div className="flex gap-2">
             <input
               type="text"

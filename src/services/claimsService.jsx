@@ -93,9 +93,15 @@ const claimsService = {
    * @returns {Promise} API response with extraction data
    */
   getClaimExtractionData: async (claimId) => {
-    const response = await axiosInstance.get(`/claims/api/claims/${claimId}/extraction-data/`)
+    // const response = await axiosInstance.get(`/claims/api/claims/VIT-20251006181925-5d0ad925/extraction-data/`)
+  const response = await axiosInstance.get(`/claims/api/claims/${claimId}/extraction-data/`)
     return response.data
   },
+
+    updateClaimExtractionData: async (claimId, data) => {
+        const response = await axiosInstance.put(`/claims/api/claims/${claimId}/extraction-data/`, data)
+        return response.data
+    },
 
   /**
    * Get dropdown options for filters

@@ -19,12 +19,15 @@ import {
   clearResults as clearSymptomsResults
 } from '../../../store/slices/symptomsSlice'
 
+import claimsService from "../../../services/claimsService.jsx";
+import { useParams } from 'react-router-dom'
 /**
  * Digitisation Tab Component
  * Displays symptoms, diagnosis selection and invoice item tables
  */
-const DigitisationTab = ({ digitisationData = {} }) => {
+const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
   const dispatch = useDispatch()
+
   const {
     symptomsByLCT = [],
     diagnosisByLCT = [],
@@ -32,7 +35,6 @@ const DigitisationTab = ({ digitisationData = {} }) => {
     diagnosisByVitraya = [],
     invoices: initialInvoices = []
   } = digitisationData
-
   // Redux state
   const diagnosisResults = useSelector(selectDiagnosisResults)
   const loadingDiagnoses = useSelector(selectDiagnosisLoading)
@@ -46,7 +48,7 @@ const DigitisationTab = ({ digitisationData = {} }) => {
   const [diagnosisSearch, setDiagnosisSearch] = useState('')
   const [showDiagnosisDropdown, setShowDiagnosisDropdown] = useState(false)
   const [showSymptomsDropdown, setShowSymptomsDropdown] = useState(false)
-  const [invoices, setInvoices] = useState(initialInvoices)
+  // const [invoices, setInvoices] = useState(initialInvoices)
   const [invalidReasonBoxIndex, setInvalidReasonBoxIndex] = useState(null)
   const [invalidReasons, setInvalidReasons] = useState({})
   const [validatedInvoices, setValidatedInvoices] = useState({})
@@ -226,6 +228,17 @@ const DigitisationTab = ({ digitisationData = {} }) => {
     delete updated[invoiceIndex]
     setValidatedInvoices(updated)
   }
+
+    // const handleSaveInvoices = async () => {
+    //     try {
+    //         const payload = { output_data: {invoices} }
+    //         console.log('Sending updated invoice data:', payload)
+    //         await claimsService.updateClaimExtractionData(claimId, payload)
+    //         console.log('Extraction data updated successfully')
+    //     } catch (error) {
+    //         console.error('Failed to update extraction data', error)
+    //     }
+    // }
 
   return (
     <div className="space-y-6">
@@ -589,6 +602,14 @@ const DigitisationTab = ({ digitisationData = {} }) => {
             </div>
           </div>
         ))}
+          {/*<div className="flex justify-end">*/}
+          {/*    <button*/}
+          {/*        onClick={handleSaveInvoices}*/}
+          {/*        className="mt-4 px-4 py-2 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"*/}
+          {/*    >*/}
+          {/*        Save Invoice Changes*/}
+          {/*    </button>*/}
+          {/*</div>*/}
       </div>
     </div>
   )
