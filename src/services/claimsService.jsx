@@ -111,6 +111,37 @@ const claimsService = {
     const response = await axiosInstance.get('/claims/api/dropdown-options/')
     return response.data
   },
+
+  /**
+   * Update manual adjudication for a claim
+   * @param {string} claimUniqueId - Claim unique ID
+   * @param {Object} data - Adjudication data with output_data and manual edits
+   * @returns {Promise} API response
+   */
+  updateManualAdjudication: async (claimUniqueId, data) => {
+    const response = await axiosInstance.put(`/claims/api/claims/${claimUniqueId}/adjudication/manual/`, data)
+    return response.data
+  },
+
+  /**
+   * Get manual adjudication data for a claim
+   * @param {string} claimUniqueId - Claim unique ID
+   * @returns {Promise} API response with manual adjudication data
+   */
+  getManualAdjudication: async (claimUniqueId) => {
+    const response = await axiosInstance.get(`/claims/api/claims/${claimUniqueId}/adjudication/manual/`)
+    return response.data
+  },
+
+  /**
+   * Get AI adjudication data for a claim
+   * @param {string} claimUniqueId - Claim unique ID
+   * @returns {Promise} API response with AI adjudication data
+   */
+  getAIAdjudication: async (claimUniqueId) => {
+    const response = await axiosInstance.get(`/claims/api/claims/${claimUniqueId}/adjudication/ai/`)
+    return response.data
+  },
 }
 
 export default claimsService

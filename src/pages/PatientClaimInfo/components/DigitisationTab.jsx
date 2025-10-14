@@ -27,10 +27,14 @@ import { useParams } from 'react-router-dom'
  */
 const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
   const dispatch = useDispatch()
-  const {claimId} = useParams()
-  const { symptomsByLCT = [], diagnosisByLCT = [] = [] } = digitisationData
-  // const [invoices, setInvoices] = useState(initialInvoices || [])
 
+  const {
+    symptomsByLCT = [],
+    diagnosisByLCT = [],
+    symptomsByVitraya = [],
+    diagnosisByVitraya = [],
+    invoices: initialInvoices = []
+  } = digitisationData
   // Redux state
   const diagnosisResults = useSelector(selectDiagnosisResults)
   const loadingDiagnoses = useSelector(selectDiagnosisLoading)
@@ -124,23 +128,23 @@ const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
     setShowDiagnosisDropdown(false)
   }
 
-  // Initialize selected diagnoses from props
+  // Initialize selected diagnoses from Vitraya data (green background)
   useEffect(() => {
-    if (diagnosisByLCT && diagnosisByLCT.length > 0) {
-      diagnosisByLCT.forEach(diagnosis => {
+    if (diagnosisByVitraya && diagnosisByVitraya.length > 0) {
+      diagnosisByVitraya.forEach(diagnosis => {
         dispatch(addSelectedDiagnosis(diagnosis))
       })
     }
-  }, [diagnosisByLCT, dispatch])
+  }, [diagnosisByVitraya, dispatch])
 
-  // Initialize selected symptoms from props
+  // Initialize selected symptoms from Vitraya data (green background)
   useEffect(() => {
-    if (symptomsByLCT && symptomsByLCT.length > 0) {
-      symptomsByLCT.forEach(symptom => {
+    if (symptomsByVitraya && symptomsByVitraya.length > 0) {
+      symptomsByVitraya.forEach(symptom => {
         dispatch(addSelectedSymptom(symptom))
       })
     }
-  }, [symptomsByLCT, dispatch])
+  }, [symptomsByVitraya, dispatch])
 
   // Close dropdown when clicking outside
   useEffect(() => {
