@@ -12,11 +12,14 @@ const ClinicalValidationTab = ({
   error = null,
   rawApiResponse = null,
   claimUniqueId = null,
-  onSave = null
+  onSave = null,
+  onRerunSuccess = null,
+  onShowInvoice = null
 }) => {
   const [invoiceItems, setInvoiceItems] = useState(invoices)
   const [updating, setUpdating] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
+  const [rerunning, setRerunning] = useState(false)
 
   // Update invoiceItems when invoices prop changes
   useEffect(() => {
@@ -87,11 +90,8 @@ const ClinicalValidationTab = ({
         adjudication_response: adjudicationResponse
       }
 
-      console.log('Updating adjudication data:', payload)
-
       // Call the API
       const response = await claimsService.updateManualAdjudication(claimUniqueId, payload)
-      console.log('Adjudication update response:', response)
 
       setHasChanges(false)
       return true
@@ -110,6 +110,36 @@ const ClinicalValidationTab = ({
       onSave(saveAdjudicationData)
     }
   }, [invoiceItems, rawApiResponse, claimUniqueId])
+
+  // Handle Rerun button click
+  const handleRerun = async () => {
+    if (!claimUniqueId) {
+      alert('Claim ID is required for re-adjudication')
+      return
+    }
+
+    try {
+      setRerunning(true)
+
+      // Step 1: Call re-adjudicate API
+      const reAdjudicateResponse = await claimsService.reAdjudicate(claimUniqueId)
+
+      // Step 2: Fetch updated AI adjudication data
+      const aiAdjudicationResponse = await claimsService.getAIAdjudication(claimUniqueId)
+
+      // Step 3: Notify parent component to update data
+      if (onRerunSuccess) {
+        onRerunSuccess(aiAdjudicationResponse)
+      }
+
+      alert('Re-adjudication completed successfully!')
+    } catch (err) {
+      console.error('Error during re-adjudication:', err)
+      alert('Failed to re-adjudicate claim. Please try again.')
+    } finally {
+      setRerunning(false)
+    }
+  }
 
   const handleFieldChange = (invoiceIndex, itemIndex, field, value) => {
     const updatedInvoices = [...invoiceItems]
@@ -185,9 +215,13 @@ const ClinicalValidationTab = ({
           {/* Financial Summary Cards */}
           <div className="flex items-center justify-between gap-4">
         {/* Rerun Button */}
-        <button className="ml-auto px-4 py-2 text-xs text-blue-600 border border-blue-600 rounded hover:bg-blue-50 font-medium flex items-center gap-1">
-          <span>↻</span>
-          <span>Rerun</span>
+        <button
+          onClick={handleRerun}
+          disabled={rerunning}
+          className="ml-auto px-4 py-2 text-xs text-blue-600 border border-blue-600 rounded hover:bg-blue-50 font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span className={rerunning ? 'animate-spin' : ''}>↻</span>
+          <span>{rerunning ? 'Rerunning...' : 'Rerun'}</span>
         </button>
       </div>
 
@@ -222,12 +256,15 @@ const ClinicalValidationTab = ({
         {invoiceItems.map((invoice, invoiceIndex) => (
           <div key={invoiceIndex} className="border border-gray-200 rounded-lg bg-white">
             {/* Invoice Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+            {/* <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
               <h3 className="text-sm font-semibold text-gray-900">{invoice.invoiceNumber} - Clinical Validation</h3>
-              <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+              <button
+                onClick={() => onShowInvoice && onShowInvoice(invoice.invoiceNumber)}
+                className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+              >
                 Show This Invoice
               </button>
-            </div>
+            </div> */}
 
             {/* Table */}
             <div className="overflow-x-auto">

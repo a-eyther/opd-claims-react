@@ -142,6 +142,26 @@ const claimsService = {
     const response = await axiosInstance.get(`/claims/api/claims/${claimUniqueId}/adjudication/ai/`)
     return response.data
   },
+
+  /**
+   * Trigger re-adjudication for a claim
+   * @param {string} claimUniqueId - Claim unique ID
+   * @returns {Promise} API response
+   */
+  reAdjudicate: async (claimUniqueId) => {
+    const response = await axiosInstance.post(`/claims/api/claims/${claimUniqueId}/re-adjudicate/`)
+    return response.data
+  },
+
+  /**
+   * Finalize manual adjudication for a claim
+   * @param {string} claimUniqueId - Claim unique ID
+   * @returns {Promise} API response
+   */
+  finalizeManualAdjudication: async (claimUniqueId) => {
+    const response = await axiosInstance.post(`/claims/api/claims/${claimUniqueId}/adjudication/manual/finalize/`)
+    return response.data
+  },
 }
 
 export default claimsService
