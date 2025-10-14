@@ -6,9 +6,12 @@ import claimsService from '../../../services/claimsService';
  * Filter panel for Edit Management page
  */
 const EditFilters = ({ filters, onFilterChange }) => {
-  const [dateRange, setDateRange] = useState('All Time');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
+
+  // Local state for amount inputs to enable debouncing
+  const [localAmountMin, setLocalAmountMin] = useState(filters.amountMin || '');
+  const [localAmountMax, setLocalAmountMax] = useState(filters.amountMax || '');
 
   // Dropdown options state
   const [dropdownOptions, setDropdownOptions] = useState({
@@ -43,10 +46,23 @@ const EditFilters = ({ filters, onFilterChange }) => {
     fetchDropdownOptions();
   }, []);
 
+  // Debounce amount filter updates
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      onFilterChange({
+        ...filters,
+        amountMin: localAmountMin,
+        amountMax: localAmountMax
+      });
+    }, 800); // 800ms debounce for amount inputs
+
+    return () => clearTimeout(timeoutId);
+  }, [localAmountMin, localAmountMax]);
+
   const handleDateRangeChange = (value) => {
-    setDateRange(value);
     if (value === 'Custom Range') {
       setShowDatePicker(true);
+      onFilterChange({ ...filters, dateRange: value });
     } else {
       setShowDatePicker(false);
       // Calculate date range for preset options
@@ -70,8 +86,8 @@ const EditFilters = ({ filters, onFilterChange }) => {
         }
       }
 
-      // Update filters with calculated dates
-      onFilterChange({ ...filters, startDate, endDate });
+      // Update filters with calculated dates and dateRange
+      onFilterChange({ ...filters, startDate, endDate, dateRange: value });
     }
   };
 
@@ -80,7 +96,8 @@ const EditFilters = ({ filters, onFilterChange }) => {
     onFilterChange({
       ...filters,
       startDate: customDateRange.start,
-      endDate: customDateRange.end
+      endDate: customDateRange.end,
+      dateRange: 'Custom Range'
     });
   };
 
@@ -146,7 +163,7 @@ const EditFilters = ({ filters, onFilterChange }) => {
           <label className="block text-sm font-medium mb-2">Date Range</label>
           <select
             className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={dateRange}
+            value={filters.dateRange || 'All Time'}
             onChange={(e) => handleDateRangeChange(e.target.value)}
           >
             <option>All Time</option>
@@ -157,7 +174,7 @@ const EditFilters = ({ filters, onFilterChange }) => {
           </select>
 
           {/* Custom Date Range Picker Tooltip */}
-          {showDatePicker && dateRange === 'Custom Range' && (
+          {showDatePicker && filters.dateRange === 'Custom Range' && (
             <div className="absolute z-20 bottom-full mb-2 left-0 w-72 p-4 bg-white border border-gray-300 rounded-lg shadow-lg space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Start Date</label>
@@ -196,16 +213,16 @@ const EditFilters = ({ filters, onFilterChange }) => {
             <input
               type="text"
               placeholder="Min (KSh)"
-              value={filters.amountMin}
-              onChange={(e) => onFilterChange({ ...filters, amountMin: e.target.value })}
-              className="w-1/2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={localAmountMin}
+              onChange={(e) => setLocalAmountMin(e.target.value)}
+              className="w-1/2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <input
               type="text"
               placeholder="Max (KSh)"
-              value={filters.amountMax}
-              onChange={(e) => onFilterChange({ ...filters, amountMax: e.target.value })}
-              className="w-1/2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={localAmountMax}
+              onChange={(e) => setLocalAmountMax(e.target.value)}
+              className="w-1/2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
