@@ -33,7 +33,11 @@ const EditManagement = () => {
     editDone: 0,
     editPending: 0
   });
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => {
+    // Restore saved page from sessionStorage
+    const savedPage = sessionStorage.getItem('editManagement_currentPage');
+    return savedPage ? parseInt(savedPage, 10) : 1;
+  });
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize] = useState(10);
 
@@ -125,6 +129,11 @@ const EditManagement = () => {
   // Refetch when page changes
   useEffect(() => {
     fetchClaims();
+  }, [currentPage]);
+
+  // Save current page to sessionStorage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem('editManagement_currentPage', currentPage.toString());
   }, [currentPage]);
 
   // Handle row click - navigate to PatientClaimInfo with claim_unique_id
