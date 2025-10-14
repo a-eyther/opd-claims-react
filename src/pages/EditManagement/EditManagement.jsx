@@ -23,7 +23,8 @@ const EditManagement = () => {
     amountMin: '',
     amountMax: '',
     startDate: '',
-    endDate: ''
+    endDate: '',
+    dateRange: 'All Time'
   });
 
   const [claimsData, setClaimsData] = useState([]);
@@ -79,11 +80,19 @@ const EditManagement = () => {
         params.append('end_date', filters.endDate);
       }
 
+      // Add amount range filters
+      if (filters.amountMin) {
+        params.append('min_amount', filters.amountMin);
+      }
+      if (filters.amountMax) {
+        params.append('max_amount', filters.amountMax);
+      }
+
       // Add pagination
       params.append('page', currentPage.toString());
       params.append('page_size', pageSize.toString());
 
-      const response = await axiosInstance.get(`/claims/api/v2/claims/?${params.toString()}`);
+      const response = await axiosInstance.get(`/claims/api/claims/?${params.toString()}`);
       const claims = response.data.results || response.data;
       setClaimsData(claims);
 
@@ -121,7 +130,7 @@ const EditManagement = () => {
     const timeoutId = setTimeout(() => {
       setCurrentPage(1);
       fetchClaims();
-    }, 500); // 500ms debounce
+    }, 1000); // 1000ms debounce
 
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
@@ -188,7 +197,7 @@ const EditManagement = () => {
         <div className="flex items-center gap-3">
           <div className="flex-1">
             <SearchBar
-              placeholder="Search claims, providers, benefit types..."
+              placeholder="Search Visit Number and Claim ID, for more search use Filters option"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
