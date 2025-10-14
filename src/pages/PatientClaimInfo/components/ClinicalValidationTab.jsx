@@ -1,11 +1,28 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import claimsService from '../../../services/claimsService'
 
 /**
  * Clinical Validation Tab Component
  * Displays financial summary and invoice validation tables
  */
-const ClinicalValidationTab = ({ invoices = [], financials = {} }) => {
+const ClinicalValidationTab = ({
+  invoices = [],
+  financials = {},
+  loading = false,
+  error = null,
+  rawApiResponse = null,
+  claimUniqueId = null,
+  onSave = null
+}) => {
   const [invoiceItems, setInvoiceItems] = useState(invoices)
+  const [updating, setUpdating] = useState(false)
+  const [hasChanges, setHasChanges] = useState(false)
+
+  // Update invoiceItems when invoices prop changes
+  useEffect(() => {
+    setInvoiceItems(invoices)
+    setHasChanges(false)
+  }, [invoices])
 
   const editorReasonOptions = [
     'No reason',
@@ -20,16 +37,144 @@ const ClinicalValidationTab = ({ invoices = [], financials = {} }) => {
     'Custom reason...'
   ]
 
+  const saveAdjudicationData = async () => {
+    if (!rawApiResponse || !claimUniqueId) {
+      console.warn('Missing rawApiResponse or claimUniqueId for adjudication update')
+      return false
+    }
+
+    try {
+      setUpdating(true)
+
+      // Clone the adjudication_response from raw API response
+      const adjudicationResponse = JSON.parse(JSON.stringify(rawApiResponse.data.adjudication_response))
+
+      // Update all items in billing_data
+      let globalItemIndex = 0
+      invoiceItems.forEach((invoice) => {
+        invoice.items.forEach((item) => {
+          if (adjudicationResponse.billing_data && adjudicationResponse.billing_data[globalItemIndex]) {
+            const billingItem = adjudicationResponse.billing_data[globalItemIndex]
+
+            // Map the fields: APP QTY -> approved_quantity, APP AMT -> approved_amount, Editor Reason -> editor_reason
+            billingItem.approved_quantity = parseFloat(item.appQty) || 0
+            billingItem.approved_amount = parseFloat(item.appAmt) || 0
+
+            // Update editor reason in editor_reason field if it's not empty
+            if (item.editorReason && item.editorReason.trim() !== '') {
+              billingItem.editor_reason = item.editorReason
+            }
+
+            // Recalculate savings (never negative)
+            const calculatedSavings = (billingItem.request_amount || 0) - (billingItem.approved_amount || 0)
+            billingItem.savings = calculatedSavings < 0 ? 0 : calculatedSavings
+          }
+          globalItemIndex++
+        })
+      })
+
+      // Prepare the payload with the entire adjudication_response
+      const payload = {
+        adjudication_response: adjudicationResponse
+      }
+
+      console.log('Updating adjudication data:', payload)
+
+      // Call the API
+      const response = await claimsService.updateManualAdjudication(claimUniqueId, payload)
+      console.log('Adjudication update response:', response)
+
+      setHasChanges(false)
+      return true
+
+    } catch (err) {
+      console.error('Error updating adjudication data:', err)
+      return false
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  // Expose save function to parent via callback
+  useEffect(() => {
+    if (onSave) {
+      onSave(saveAdjudicationData)
+    }
+  }, [onSave, invoiceItems, rawApiResponse, claimUniqueId])
+
   const handleFieldChange = (invoiceIndex, itemIndex, field, value) => {
     const updatedInvoices = [...invoiceItems]
-    updatedInvoices[invoiceIndex].items[itemIndex][field] = value
+    const item = updatedInvoices[invoiceIndex].items[itemIndex]
+
+    // Update the field
+    item[field] = value
+
+    // If APP QTY changes, recalculate APP AMT based on UNIT PRICE
+    if (field === 'appQty') {
+      const appQty = parseFloat(value) || 0
+      const unitPrice = item.unitPrice || 0
+      item.appAmt = appQty * unitPrice
+
+      // Recalculate savings (never show negative)
+      const calculatedSavings = (item.invAmt || 0) - item.appAmt
+      item.savings = calculatedSavings < 0 ? 0 : calculatedSavings
+    }
+
+    // If APP AMT changes, recalculate savings
+    if (field === 'appAmt') {
+      const appAmt = parseFloat(value) || 0
+      const calculatedSavings = (item.invAmt || 0) - appAmt
+      item.savings = calculatedSavings < 0 ? 0 : calculatedSavings
+    }
+
     setInvoiceItems(updatedInvoices)
+
+    // Mark that changes have been made
+    if (field === 'appQty' || field === 'appAmt' || field === 'editorReason') {
+      setHasChanges(true)
+    }
   }
 
   return (
-    <div className="space-y-6">
-      {/* Financial Summary Cards */}
-      <div className="flex items-center justify-between gap-4">
+    <div className="space-y-6 relative">
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Fetching updated data...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && !loading && (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-red-600 mb-4">
+              <svg className="w-16 h-16 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">{error}</h2>
+            <p className="text-gray-600">Unable to load clinical validation data.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Updating Indicator */}
+      {updating && (
+        <div className="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-20 flex items-center gap-2">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          <span>Saving changes...</span>
+        </div>
+      )}
+
+      {/* Content - Only show if no error */}
+      {!error && (
+        <>
+          {/* Financial Summary Cards */}
+          <div className="flex items-center justify-between gap-4">
         {/* Rerun Button */}
         <button className="ml-auto px-4 py-2 text-xs text-blue-600 border border-blue-600 rounded hover:bg-blue-50 font-medium flex items-center gap-1">
           <span>↻</span>
@@ -82,11 +227,11 @@ const ClinicalValidationTab = ({ invoices = [], financials = {} }) => {
                   <tr>
                     <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Medicine Name</th>
                     <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Inv Qty</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">App Qty</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase w-24">App Qty</th>
                     <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Unit Price</th>
                     <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Preauth Amt</th>
                     <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Inv Amt</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">App Amt</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase w-28">App Amt</th>
                     <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Savings</th>
                     <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Invoice No</th>
                     <th className="px-3 py-2 text-left font-semibold text-gray-600 uppercase">Category</th>
@@ -99,23 +244,23 @@ const ClinicalValidationTab = ({ invoices = [], financials = {} }) => {
                     <tr key={itemIndex} className="hover:bg-gray-50">
                       <td className="px-3 py-3 text-gray-900">{item.medicineName}</td>
                       <td className="px-3 py-3 text-gray-700">{item.invQty}</td>
-                      <td className="px-3 py-3">
+                      <td className="px-3 py-3 w-24">
                         <input
                           type="number"
                           value={item.appQty}
                           onChange={(e) => handleFieldChange(invoiceIndex, itemIndex, 'appQty', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-gray-700 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full min-w-[80px] px-2 py-1 border border-gray-300 rounded text-gray-700 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                       </td>
                       <td className="px-3 py-3 text-gray-700">{item.unitPrice?.toFixed(2)}</td>
                       <td className="px-3 py-3 text-gray-700">{item.preauthAmt?.toFixed(2)}</td>
                       <td className="px-3 py-3 text-gray-700">{item.invAmt?.toFixed(2)}</td>
-                      <td className="px-3 py-3">
+                      <td className="px-3 py-3 w-28">
                         <input
                           type="number"
                           value={item.appAmt}
                           onChange={(e) => handleFieldChange(invoiceIndex, itemIndex, 'appAmt', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-gray-700 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full min-w-[96px] px-2 py-1 border border-gray-300 rounded text-gray-700 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                       </td>
                       <td className="px-3 py-3 text-gray-700">{item.savings?.toFixed(2)}</td>
@@ -187,6 +332,8 @@ const ClinicalValidationTab = ({ invoices = [], financials = {} }) => {
           </div>
         ))}
       </div>
+        </>
+      )}
     </div>
   )
 }
