@@ -47,9 +47,9 @@ const PatientClaimInfo = () => {
   const [rawApiResponse, setRawApiResponse] = useState(null)
   const [clinicalSaveFunction, setClinicalSaveFunction] = useState(null)
   const [reviewLoading, setReviewLoading] = useState(false)
-  const [isChecklistTabLocked, setIsChecklistTabLocked] = useState(false)
-  const [isClinicalTabLocked, setIsClinicalTabLocked] = useState(false)
-  const [isReviewTabLocked, setIsReviewTabLocked] = useState(false)
+  const [isChecklistTabLocked, setIsChecklistTabLocked] = useState(true)
+  const [isClinicalTabLocked, setIsClinicalTabLocked] = useState(true)
+  const [isReviewTabLocked, setIsReviewTabLocked] = useState(true)
 
   // Fetch claim extraction data from API
   useEffect(() => {
