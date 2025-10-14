@@ -5,8 +5,13 @@ import { ArrowLeftIcon } from '../../../components/icons'
  * Action Bar Component
  * Displays bottom action bar with navigation and action buttons
  */
-const ActionBar = ({ queryCount = 0, onSave, onQueryClick }) => {
+const ActionBar = ({ queryCount = 0, onSave, onQueryClick, activeTab, invoices = [], validatedInvoices = {} }) => {
   const navigate = useNavigate()
+
+  // Calculate if there are pending invoices in digitisation tab
+  const hasPendingInvoices = activeTab === 'digitisation' &&
+    invoices.length > 0 &&
+    Object.keys(validatedInvoices).length < invoices.length
 
   return (
     <div className="bg-white border-t border-gray-200 px-6 py-4">
@@ -32,7 +37,12 @@ const ActionBar = ({ queryCount = 0, onSave, onQueryClick }) => {
           </button>
           <button
             onClick={onSave}
-            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+            disabled={hasPendingInvoices}
+            className={`px-6 py-2 text-sm font-medium rounded-md transition-colors ${
+              hasPendingInvoices
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
           >
             Save & Continue
           </button>

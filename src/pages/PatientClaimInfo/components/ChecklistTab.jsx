@@ -10,9 +10,9 @@ const ChecklistTab = ({ invoices = [] }) => {
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-gray-900">{invoice.invoiceNumber}</h3>
-            <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+            {/* <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
               Show this invoice
-            </button>
+            </button> */}
           </div>
 
           {/* Content Grid */}

@@ -104,6 +104,17 @@ const claimsService = {
     },
 
   /**
+   * Patch claim extraction data by claim unique ID
+   * @param {string} claimUniqueId - Claim unique ID
+   * @param {Object} data - Partial extraction data with output_data
+   * @returns {Promise} API response
+   */
+  patchClaimExtractionData: async (claimUniqueId, data) => {
+    const response = await axiosInstance.patch(`/claims/api/claims/${claimUniqueId}/extraction-data/`, data)
+    return response.data
+  },
+
+  /**
    * Get dropdown options for filters
    * @returns {Promise} API response with providers, benefit_types, and decisions
    */
