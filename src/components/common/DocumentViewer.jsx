@@ -173,8 +173,6 @@ const DocumentViewer = ({
           </div>
         </div>
         <div className='border border-gray-200 rounded-md border-dashed p-2'>
-
-        
         {/* Controls Row */}
         <div className="flex items-center justify-between mb-2">
           {/* Navigation Buttons */}
@@ -226,12 +224,14 @@ const DocumentViewer = ({
             </button>
           </div>
         </div>
+        </div>
+      </div>
 
       {/* Document Display Area */}
-      <div className="flex-1 overflow-auto bg-gray-100 p-6">
+      <div className="flex-1 bg-gray-100 p-6 overflow-y-auto">
         {isValidPdfUrl && PdfDocument && PdfPage ? (
           /* PDF Viewer */
-          <div className="h-full flex items-center justify-center overflow-auto">
+          <div className="flex justify-center">
             {loading && !error && (
               <div className="text-gray-600">Loading PDF...</div>
             )}
@@ -323,8 +323,6 @@ const DocumentViewer = ({
             </div>
           </div>
         )}
-      </div>
-      </div>
       </div>
     </div>
   )
