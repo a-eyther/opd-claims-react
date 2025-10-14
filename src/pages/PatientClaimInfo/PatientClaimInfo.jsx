@@ -27,6 +27,7 @@ const PatientClaimInfo = () => {
   const [isQueryModalOpen, setIsQueryModalOpen] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(180) // 3 minutes in seconds
   const [claimData, setClaimData] = useState(null)
+  const [invoices, setInvoices] = useState([]) //  Added invoices state
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -46,8 +47,9 @@ const PatientClaimInfo = () => {
 
         if (transformedData) {
           setClaimData(transformedData)
+          // set invoices state after data load
+          setInvoices(transformedData?.digitisationData?.invoices || [])
         } else {
-          // Fallback to mock data if transformation fails
           console.warn('Transformation failed, using mock data')
           setClaimData(getClaimDetailsById(claimId) || {})
         }
@@ -55,9 +57,8 @@ const PatientClaimInfo = () => {
         console.error('Error fetching claim data:', err)
         setError(err.message || 'Failed to load claim data')
 
-        // Fallback to mock data on error
         console.warn('API call failed, using mock data')
-        //setClaimData(getClaimDetailsById(claimId) || {})
+        // setClaimData(getClaimDetailsById(claimId) || {})
       } finally {
         setLoading(false)
       }
@@ -91,9 +92,19 @@ const PatientClaimInfo = () => {
     { id: 'review', label: 'Review' }
   ]
 
-  const handleSave = () => {
-    // Save logic here
-    console.log('Save & Continue clicked')
+  // Updated handleSave with PUT API integration
+  const handleSave = async () => {
+    if (!claimId) return
+    try {
+      console.log('Saving extraction data...', invoices)
+      const payload = { output_data: { invoices } }
+      const response = await claimsService.updateClaimExtractionData(claimId, payload)
+      console.log('Extraction data updated successfully:', response)
+      alert('Extraction data saved successfully!')
+    } catch (err) {
+      console.error('Error updating extraction data:', err)
+      alert('Failed to save extraction data.')
+    }
   }
 
   const handleQueryClick = () => {
@@ -156,6 +167,7 @@ const PatientClaimInfo = () => {
         timeRemaining={timeRemaining}
         financials={claimData.financials}
       />
+
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Section - Document Viewer (40%) */}
@@ -181,48 +193,58 @@ const PatientClaimInfo = () => {
 
           {/* Content Area */}
           <div className="p-6 bg-white">
-          {activeTab === 'patient-info' && (
-            <div className="space-y-6">
-              {/* Patient and Claim Details - Side by Side */}
-              <div className="grid grid-cols-2 gap-6">
-                <PatientDetails patient={claimData.patient} />
-                <ClaimDetails claim={claimData.claim} />
+            {activeTab === 'patient-info' && (
+              <div className="space-y-6">
+                {/* Patient and Claim Details - Side by Side */}
+                <div className="grid grid-cols-2 gap-6">
+                  <PatientDetails patient={claimData.patient} />
+                  <ClaimDetails claim={claimData.claim} />
+                </div>
+                {/* Policy Details - Full Width */}
+                <PolicyDetails policy={claimData.policy} />
               </div>
-              {/* Policy Details - Full Width */}
-              <PolicyDetails policy={claimData.policy} />
-            </div>
-          )}
+            )}
 
-          {activeTab === 'symptoms' && (
-            <div className="text-center text-gray-500 py-12">
-              <p>Symptoms & Diagnosis content will be displayed here</p>
-            </div>
-          )}
+            {activeTab === 'symptoms' && (
+              <div className="text-center text-gray-500 py-12">
+                <p>Symptoms & Diagnosis content will be displayed here</p>
+              </div>
+            )}
 
-          {activeTab === 'digitisation' && (
-            <DigitisationTab digitisationData={claimData.digitisationData} />
-          )}
+            {activeTab === 'digitisation' && (
+              <DigitisationTab
+                digitisationData={claimData.digitisationData}
+                invoices={invoices}
+                setInvoices={setInvoices}
+              />
+            )}
 
-          {activeTab === 'checklist' && (
-            <ChecklistTab invoices={claimData.invoices} />
-          )}
+            {activeTab === 'checklist' && (
+              <ChecklistTab invoices={claimData.invoices} />
+            )}
 
-          {activeTab === 'clinical' && (
-            <ClinicalValidationTab
-              invoices={claimData.clinicalValidationInvoices}
-              financials={claimData.financials}
-            />
-          )}
+            {activeTab === 'clinical' && (
+              <ClinicalValidationTab
+                invoices={claimData.clinicalValidationInvoices}
+                financials={claimData.financials}
+              />
+            )}
 
-          {activeTab === 'review' && (
-            <ReviewTab reviewData={claimData.reviewData} />
-          )}
+            {activeTab === 'review' && (
+              <ReviewTab reviewData={claimData.reviewData} />
+            )}
           </div>
         </div>
       </div>
 
       {/* Footer Action Bar */}
-      <ActionBar queryCount={3} onSave={handleSave} onQueryClick={handleQueryClick} />
+      <ActionBar
+        queryCount={3}
+        onSave={handleSave}
+        onQueryClick={handleQueryClick}
+        invoices={invoices}
+        setInvoices={setInvoices}
+      />
 
       {/* Query Management Modal */}
       <QueryManagementModal

@@ -98,6 +98,11 @@ const claimsService = {
     return response.data
   },
 
+    updateClaimExtractionData: async (claimId, data) => {
+        const response = await axiosInstance.put(`/claims/api/claims/${claimId}/extraction-data/`, data)
+        return response.data
+    },
+
   /**
    * Get dropdown options for filters
    * @returns {Promise} API response with providers, benefit_types, and decisions
