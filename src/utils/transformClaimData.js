@@ -105,8 +105,6 @@ export const transformClaimExtractionData = (apiResponse) => {
                          ? output_data[Object.keys(output_data).find(key => key.includes('invoice'))]
                          : []
 
-  console.log('Transform - Found invoices data:', invoicesData)
-
   // Transform invoice line items for digitisation tab
   const transformedInvoices = invoicesData?.map((invoice) => ({
     invoiceNumber: getValue(invoice.invoice_id) !== 'Not Available' ? invoice.invoice_id : getValue(invoice.invoice_number),
@@ -181,7 +179,7 @@ export const transformClaimExtractionData = (apiResponse) => {
   return {
     claimId: getValue(claim_details?.claim_unique_id, data.claim_unique_id),
     claim_id:getValue(claim_details?.id, data.id),
-    status: getValue(claim_details?.status, 'PENDING'),
+    status: getValue(data?.edit_status, 'PENDING'),
     benefitType: getValue(claim_details?.benefit_name, getValue(claim_details?.claim_type, 'OPD')),
     timer: '03:00', // Timer not in API
     timerStatus: 'ACTION REQUIRED', // Timer status not in API

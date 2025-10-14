@@ -19,8 +19,6 @@ import {
   clearResults as clearSymptomsResults
 } from '../../../store/slices/symptomsSlice'
 
-import claimsService from "../../../services/claimsService.jsx";
-import { useParams } from 'react-router-dom'
 /**
  * Digitisation Tab Component
  * Displays symptoms, diagnosis selection and invoice item tables
@@ -228,10 +226,6 @@ const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
     delete updated[invoiceIndex]
     setValidatedInvoices(updated)
   }
-
-  // Debug log to check invoices
-  console.log('DigitisationTab - Invoices:', invoices)
-  console.log('DigitisationTab - digitisationData:', digitisationData)
 
     // const handleSaveInvoices = async () => {
     //     try {

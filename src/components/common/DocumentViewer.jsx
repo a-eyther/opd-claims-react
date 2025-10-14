@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { ZoomInIcon, ZoomOutIcon, RotateIcon, DownloadIcon, DocumentIcon, ChevronDownIcon } from '../icons'
 
 /**
  * Document Viewer Component
  * Displays PDF documents with zoom and navigation controls
  */
-const DocumentViewer = ({
+const DocumentViewer = memo(({
   documents = [],
   selectedDocumentIndex = 0,
   onDocumentChange,
@@ -36,7 +36,6 @@ const DocumentViewer = ({
       documentUrl.length > 0 &&
       (documentUrl.startsWith('http') || documentUrl.startsWith('/'))
     )
-    console.log('isValidPdfUrl check:', { documentUrl, isValid })
     return isValid
   }, [documentUrl])
 
@@ -55,20 +54,17 @@ const DocumentViewer = ({
   // Only load react-pdf if we have a valid URL
   useEffect(() => {
     if (isValidPdfUrl && !PdfDocument) {
-      console.log('Loading PDF library for URL:', documentUrl)
       import('react-pdf').then(({ Document, Page, pdfjs }) => {
         // Configure PDF.js worker
         pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
         setPdfDocument(() => Document)
         setPdfPage(() => Page)
-        console.log('PDF library loaded successfully')
       }).catch(err => {
         console.error('Failed to load PDF library:', err)
         setError('Failed to load PDF library')
       })
     } else if (!isValidPdfUrl && PdfDocument) {
       // Clear PDF components if URL becomes invalid
-      console.log('Clearing PDF library - URL is invalid')
       setPdfDocument(null)
       setPdfPage(null)
     }
@@ -111,16 +107,6 @@ const DocumentViewer = ({
 
     return `${nameWithoutExt.substring(0, startChars)}...${nameWithoutExt.substring(nameWithoutExt.length - endChars)}${extension}`
   }
-
-  // Debug log - show what we received
-  console.log('DocumentViewer received:', {
-    documentsCount: documents.length,
-    selectedDocumentIndex,
-    documentUrl,
-    documentExists: !!document,
-    isValidPdfUrl,
-    PdfLoaded: !!PdfDocument
-  })
 
   if (!documents || documents.length === 0) {
     return (
@@ -326,6 +312,8 @@ const DocumentViewer = ({
       </div>
     </div>
   )
-}
+})
+
+DocumentViewer.displayName = 'DocumentViewer'
 
 export default DocumentViewer
