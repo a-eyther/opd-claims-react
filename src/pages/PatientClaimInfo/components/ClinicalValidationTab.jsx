@@ -24,6 +24,15 @@ const ClinicalValidationTab = ({
     setHasChanges(false)
   }, [invoices])
 
+  // Calculate totals from invoice items
+  const calculatedTotals = invoiceItems.reduce((acc, invoice) => {
+    invoice.items?.forEach(item => {
+      acc.totalApproved += parseFloat(item.appAmt) || 0
+      acc.totalSavings += parseFloat(item.savings) || 0
+    })
+    return acc
+  }, { totalApproved: 0, totalSavings: 0 })
+
   const editorReasonOptions = [
     'No reason',
     'Dosage adjusted per clinical guidelines',
@@ -100,7 +109,7 @@ const ClinicalValidationTab = ({
     if (onSave) {
       onSave(saveAdjudicationData)
     }
-  }, [onSave, invoiceItems, rawApiResponse, claimUniqueId])
+  }, [invoiceItems, rawApiResponse, claimUniqueId])
 
   const handleFieldChange = (invoiceIndex, itemIndex, field, value) => {
     const updatedInvoices = [...invoiceItems]
@@ -198,13 +207,13 @@ const ClinicalValidationTab = ({
         {/* Total Approved Amount */}
         <div className="border border-gray-300 rounded-lg p-4 bg-white">
           <div className="text-[10px] text-green-600 uppercase mb-1">TOTAL APPROVED AMOUNT</div>
-          <div className="text-lg font-bold text-green-600">KES {financials.totalApproved?.toLocaleString()}</div>
+          <div className="text-lg font-bold text-green-600">KES {calculatedTotals.totalApproved.toLocaleString()}</div>
         </div>
 
         {/* Total Savings Amount */}
         <div className="border border-gray-300 rounded-lg p-4 bg-white">
           <div className="text-[10px] text-red-600 uppercase mb-1">TOTAL SAVINGS AMOUNT</div>
-          <div className="text-lg font-bold text-red-600">KES {financials.totalSavings?.toLocaleString()}</div>
+          <div className="text-lg font-bold text-red-600">KES {calculatedTotals.totalSavings.toLocaleString()}</div>
         </div>
       </div>
 

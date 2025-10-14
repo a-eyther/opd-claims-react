@@ -5,6 +5,15 @@
 const ReviewTab = ({ reviewData = {} }) => {
   const { symptoms = [], diagnoses = [], invoices = [], financialSummary = {}, productRules = [], decision = {} } = reviewData
 
+  // Calculate totals from invoice items
+  const calculatedTotals = invoices.reduce((acc, invoice) => {
+    invoice.items?.forEach(item => {
+      acc.totalApproved += parseFloat(item.approvedAmount) || 0
+      acc.totalSavings += parseFloat(item.savings) || 0
+    })
+    return acc
+  }, { totalApproved: 0, totalSavings: 0 })
+
   return (
     <div className="space-y-6">
       {/* Symptoms & Diagnosis Summary */}
@@ -137,11 +146,11 @@ const ReviewTab = ({ reviewData = {} }) => {
           </div>
           <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
             <div className="text-[10px] text-yellow-700 mb-1">Total Approved Amount</div>
-            <div className="text-base font-bold text-yellow-700">KES {financialSummary.totalApproved?.toLocaleString()}</div>
+            <div className="text-base font-bold text-yellow-700">KES {calculatedTotals.totalApproved.toLocaleString()}</div>
           </div>
           <div className="bg-green-50 border border-green-200 rounded p-3">
             <div className="text-[10px] text-green-700 mb-1">Total Savings Amount</div>
-            <div className="text-base font-bold text-green-700">KES {financialSummary.totalSavings?.toLocaleString()}</div>
+            <div className="text-base font-bold text-green-700">KES {calculatedTotals.totalSavings.toLocaleString()}</div>
           </div>
         </div>
       </div>

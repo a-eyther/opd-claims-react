@@ -42,6 +42,9 @@ const PatientClaimInfo = () => {
   const [rawApiResponse, setRawApiResponse] = useState(null)
   const [clinicalSaveFunction, setClinicalSaveFunction] = useState(null)
   const [reviewLoading, setReviewLoading] = useState(false)
+  const [isChecklistTabLocked, setIsChecklistTabLocked] = useState(true)
+  const [isClinicalTabLocked, setIsClinicalTabLocked] = useState(true)
+  const [isReviewTabLocked, setIsReviewTabLocked] = useState(true)
 
   // Fetch claim extraction data from API
   useEffect(() => {
@@ -281,33 +284,53 @@ const PatientClaimInfo = () => {
   const tabs = [
     { id: 'patient-info', label: 'Patient Info. Claim & Policy Details' },
     { id: 'digitisation', label: 'Digitisation' },
-    { id: 'checklist', label: 'Checklist' },
-    { id: 'clinical', label: 'Clinical Validation' },
-    { id: 'review', label: 'Review' }
+    { id: 'checklist', label: 'Checklist', locked: isChecklistTabLocked },
+    { id: 'clinical', label: 'Clinical Validation', locked: isClinicalTabLocked },
+    { id: 'review', label: 'Review', locked: isReviewTabLocked }
   ]
   // Updated handleSave with PUT API integration
   const handleSave = async () => {
     if (!claimId) return
+
+    // Handle Digitisation tab save
+    if (activeTab === 'digitisation') {
+      try {
+        console.log('Saving extraction data...', invoices)
+        const payload = { output_data: { invoices } }
+        const response = await claimsService.updateClaimExtractionData(claimId, payload)
+        console.log('Extraction data updated successfully:', response)
+        alert('Extraction data saved successfully!')
+        // Unlock checklist tab and navigate to it
+        setIsChecklistTabLocked(false)
+        setActiveTab('checklist')
+      } catch (err) {
+        console.error('Error updating extraction data:', err)
+        alert('Failed to save extraction data.')
+      }
+      return
+    }
+
+    // Handle Checklist tab save
+    if (activeTab === 'checklist') {
+      // For now, just unlock clinical tab and navigate
+      // You can add checklist save logic here if needed
+      console.log('Checklist validated, moving to clinical validation')
+      setIsClinicalTabLocked(false)
+      setActiveTab('clinical')
+      return
+    }
+
+    // Handle Clinical Validation tab save
     if (activeTab === 'clinical' && clinicalSaveFunction) {
       const success = await clinicalSaveFunction()
       if (success) {
         console.log('Clinical validation data saved successfully')
-        // Navigate to review tab on success
+        // Unlock review tab and navigate to it
+        setIsReviewTabLocked(false)
         setActiveTab('review')
       } else {
         console.error('Failed to save clinical validation data')
-        // Optionally show error message to user
       }
-    try {
-      console.log('Saving extraction data...', invoices)
-      const payload = { output_data: { invoices } }
-      const response = await claimsService.updateClaimExtractionData(claimId, payload)
-      console.log('Extraction data updated successfully:', response)
-      alert('Extraction data saved successfully!')
-    } catch (err) {
-      console.error('Error updating extraction data:', err)
-      alert('Failed to save extraction data.')
-
     }
   }
 
