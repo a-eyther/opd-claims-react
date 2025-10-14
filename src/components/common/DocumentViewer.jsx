@@ -53,20 +53,33 @@ const DocumentViewer = memo(({
 
   // Only load react-pdf if we have a valid URL
   useEffect(() => {
+    let mounted = true
+
     if (isValidPdfUrl && !PdfDocument) {
       import('react-pdf').then(({ Document, Page, pdfjs }) => {
-        // Configure PDF.js worker
-        pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
-        setPdfDocument(() => Document)
-        setPdfPage(() => Page)
+        if (mounted) {
+          // Configure PDF.js worker
+          pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+          setPdfDocument(() => Document)
+          setPdfPage(() => Page)
+        }
       }).catch(err => {
-        console.error('Failed to load PDF library:', err)
-        setError('Failed to load PDF library')
+        if (mounted) {
+          console.error('Failed to load PDF library:', err)
+          setError('Failed to load PDF library')
+        }
       })
     } else if (!isValidPdfUrl && PdfDocument) {
       // Clear PDF components if URL becomes invalid
       setPdfDocument(null)
       setPdfPage(null)
+      setNumPages(null)
+      setError(null)
+      setLoading(false)
+    }
+
+    return () => {
+      mounted = false
     }
   }, [isValidPdfUrl, PdfDocument, documentUrl])
 
@@ -215,7 +228,7 @@ const DocumentViewer = memo(({
 
       {/* Document Display Area */}
       <div className="flex-1 bg-gray-100 p-6 overflow-y-auto">
-        {isValidPdfUrl && PdfDocument && PdfPage ? (
+        {isValidPdfUrl && PdfDocument && PdfPage && pdfFile ? (
           /* PDF Viewer */
           <div className="flex justify-center">
             {loading && !error && (
@@ -227,7 +240,7 @@ const DocumentViewer = memo(({
                 <p className="text-sm mt-2">{error}</p>
               </div>
             )}
-            {!loading && !error && pdfFile && (
+            {!error && (
               <div
                 className="transition-all duration-300"
                 style={{

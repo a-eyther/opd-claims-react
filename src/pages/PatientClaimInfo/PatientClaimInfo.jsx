@@ -16,6 +16,7 @@ import QueryManagementModal from '../../components/modals/QueryManagementModal'
 import { getClaimDetailsById } from '../../constants/mockData'
 import claimsService from '../../services/claimsService'
 import { transformClaimExtractionData, transformAdjudicationData } from '../../utils/transformClaimData'
+import { buildExtractionPatchPayload } from '../../utils/buildExtractionPatchPayload'
 
 /**
  * Patient Claim Info Page
@@ -40,6 +41,9 @@ const PatientClaimInfo = () => {
   })
   const [claimData, setClaimData] = useState(null)
   const [invoices, setInvoices] = useState([]) //  Added invoices state
+  const [validatedInvoices, setValidatedInvoices] = useState({}) // Track validated invoices
+  const [invalidInvoices, setInvalidInvoices] = useState({}) // Track invalid invoices
+  const [originalInvoiceKey, setOriginalInvoiceKey] = useState('invoices') // Store original invoice key from API
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [clinicalLoading, setClinicalLoading] = useState(false)
@@ -69,6 +73,17 @@ const PatientClaimInfo = () => {
           setClaimData(transformedData)
           // set invoices state after data load
           setInvoices(transformedData?.digitisationData?.invoices || [])
+
+          // Extract and store the original invoice key from the API response
+          const outputData = response?.data?.output_data
+          if (outputData) {
+            const invoiceKey = Object.keys(outputData).find(key =>
+              key === 'invoices' || key.includes('invoice')
+            )
+            if (invoiceKey) {
+              setOriginalInvoiceKey(invoiceKey)
+            }
+          }
         } else {
           console.warn('Transformation failed, using mock data')
           setClaimData(getClaimDetailsById(claimId) || {})
@@ -334,15 +349,32 @@ const PatientClaimInfo = () => {
     // Handle Digitisation tab save
     if (activeTab === 'digitisation') {
       try {
-        const payload = { output_data: { invoices } }
-        const response = await claimsService.updateClaimExtractionData(claimId, payload)
+        // Build PATCH payload with modified invoices and medical info
+        const payload = buildExtractionPatchPayload(
+          rawApiResponse,
+          invoices,
+          validatedInvoices,
+          invalidInvoices,
+          selectedSymptoms,
+          selectedDiagnoses,
+          originalInvoiceKey
+        )
+
+        if (!payload) {
+          alert('Failed to build update payload. Please try again.')
+          return
+        }
+
+        // Call PATCH API with the constructed payload
+        await claimsService.patchClaimExtractionData(claimId, payload)
         alert('Extraction data saved successfully!')
+
         // Unlock checklist tab and navigate to it
         setIsChecklistTabLocked(false)
         setActiveTab('checklist')
       } catch (err) {
         console.error('Error updating extraction data:', err)
-        alert('Failed to save extraction data.')
+        alert('Failed to save extraction data. Please try again.')
       }
       return
     }
@@ -546,6 +578,10 @@ const PatientClaimInfo = () => {
                 digitisationData={claimData.digitisationData}
                 invoices={invoices}
                 setInvoices={setInvoices}
+                validatedInvoices={validatedInvoices}
+                setValidatedInvoices={setValidatedInvoices}
+                invalidInvoices={invalidInvoices}
+                setInvalidInvoices={setInvalidInvoices}
               />
             )}
 
@@ -584,6 +620,8 @@ const PatientClaimInfo = () => {
         onQueryClick={handleQueryClick}
         invoices={invoices}
         setInvoices={setInvoices}
+        activeTab={activeTab}
+        validatedInvoices={validatedInvoices}
       />
 
       {/* Query Management Modal */}

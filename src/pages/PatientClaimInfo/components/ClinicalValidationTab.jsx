@@ -298,9 +298,9 @@ const ClinicalValidationTab = ({
                           className="w-full min-w-[80px] px-2 py-1 border border-gray-300 rounded text-gray-700 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                       </td>
-                      <td className="px-3 py-3 text-gray-700">{item.unitPrice?.toFixed(2)}</td>
-                      <td className="px-3 py-3 text-gray-700">{item.preauthAmt?.toFixed(2)}</td>
-                      <td className="px-3 py-3 text-gray-700">{item.invAmt?.toFixed(2)}</td>
+                      <td className="px-3 py-3 text-gray-700">{(parseFloat(item.unitPrice) || 0).toFixed(2)}</td>
+                      <td className="px-3 py-3 text-gray-700">{(parseFloat(item.preauthAmt) || 0).toFixed(2)}</td>
+                      <td className="px-3 py-3 text-gray-700">{(parseFloat(item.invAmt) || 0).toFixed(2)}</td>
                       <td className="px-3 py-3 w-28">
                         <input
                           type="number"
@@ -309,7 +309,7 @@ const ClinicalValidationTab = ({
                           className="w-full min-w-[96px] px-2 py-1 border border-gray-300 rounded text-gray-700 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                       </td>
-                      <td className="px-3 py-3 text-gray-700">{item.savings?.toFixed(2)}</td>
+                      <td className="px-3 py-3 text-gray-700">{(parseFloat(item.savings) || 0).toFixed(2)}</td>
                       <td className="px-3 py-3 text-blue-600">{item.invoiceNo}</td>
                       <td className="px-3 py-3 text-gray-700">{item.category}</td>
                       <td className="px-3 py-3 text-gray-600 text-[10px]">{item.systemReason}</td>

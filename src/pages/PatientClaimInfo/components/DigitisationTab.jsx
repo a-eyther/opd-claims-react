@@ -23,7 +23,15 @@ import {
  * Digitisation Tab Component
  * Displays symptoms, diagnosis selection and invoice item tables
  */
-const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
+const DigitisationTab = ({
+  digitisationData = {},
+  invoices,
+  setInvoices,
+  validatedInvoices,
+  setValidatedInvoices,
+  invalidInvoices,
+  setInvalidInvoices
+}) => {
   const dispatch = useDispatch()
 
   const {
@@ -49,7 +57,6 @@ const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
   // const [invoices, setInvoices] = useState(initialInvoices)
   const [invalidReasonBoxIndex, setInvalidReasonBoxIndex] = useState(null)
   const [invalidReasons, setInvalidReasons] = useState({})
-  const [validatedInvoices, setValidatedInvoices] = useState({})
 
   const debounceTimerDiagnosis = useRef(null)
   const debounceTimerSymptoms = useRef(null)
@@ -169,13 +176,37 @@ const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
 
   const handleItemChange = (invoiceIndex, itemIndex, field, value) => {
     const updatedInvoices = [...invoices]
-    updatedInvoices[invoiceIndex].items[itemIndex][field] = value
+    const item = updatedInvoices[invoiceIndex].items[itemIndex]
+
+    // Update the field
+    item[field] = value
+
+    // Auto-calculate amount when qty or unit changes
+    if (field === 'qty' || field === 'unit') {
+      const qty = parseFloat(field === 'qty' ? value : item.qty) || 0
+      const unit = parseFloat(field === 'unit' ? value : item.unit) || 0
+      item.amount = qty * unit
+    }
+
+    // Recalculate invoice total amount
+    const invoiceTotalAmount = updatedInvoices[invoiceIndex].items.reduce((sum, invoiceItem) => {
+      return sum + (parseFloat(invoiceItem.amount) || 0)
+    }, 0)
+    updatedInvoices[invoiceIndex].totalAmount = invoiceTotalAmount
+
     setInvoices(updatedInvoices)
   }
 
   const handleDeleteItem = (invoiceIndex, itemIndex) => {
     const updatedInvoices = [...invoices]
     updatedInvoices[invoiceIndex].items.splice(itemIndex, 1)
+
+    // Recalculate invoice total amount after deletion
+    const invoiceTotalAmount = updatedInvoices[invoiceIndex].items.reduce((sum, invoiceItem) => {
+      return sum + (parseFloat(invoiceItem.amount) || 0)
+    }, 0)
+    updatedInvoices[invoiceIndex].totalAmount = invoiceTotalAmount
+
     setInvoices(updatedInvoices)
   }
 
@@ -203,7 +234,25 @@ const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
   }
 
   const handleConfirmInvalid = (invoiceIndex) => {
-    // Save the invalid reason
+    // Mark invoice as invalid
+    if (setInvalidInvoices) {
+      setInvalidInvoices({
+        ...invalidInvoices,
+        [invoiceIndex]: {
+          reason: invalidReasons[invoiceIndex] || 'Invalid invoice',
+          timestamp: new Date().toISOString()
+        }
+      })
+    }
+
+    // Remove from validated invoices if it was validated
+    if (validatedInvoices[invoiceIndex] && setValidatedInvoices) {
+      const updated = { ...validatedInvoices }
+      delete updated[invoiceIndex]
+      setValidatedInvoices(updated)
+    }
+
+    // Close the invalid reason box
     setInvalidReasonBoxIndex(null)
   }
 
@@ -215,16 +264,27 @@ const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
   }
 
   const handleValidClick = (invoiceIndex) => {
-    setValidatedInvoices({
-      ...validatedInvoices,
-      [invoiceIndex]: true
-    })
+    if (setValidatedInvoices) {
+      setValidatedInvoices({
+        ...validatedInvoices,
+        [invoiceIndex]: true
+      })
+    }
+
+    // Remove from invalid invoices if it was invalidated
+    if (invalidInvoices[invoiceIndex] && setInvalidInvoices) {
+      const updated = { ...invalidInvoices }
+      delete updated[invoiceIndex]
+      setInvalidInvoices(updated)
+    }
   }
 
   const handleUndoValid = (invoiceIndex) => {
-    const updated = { ...validatedInvoices }
-    delete updated[invoiceIndex]
-    setValidatedInvoices(updated)
+    if (setValidatedInvoices) {
+      const updated = { ...validatedInvoices }
+      delete updated[invoiceIndex]
+      setValidatedInvoices(updated)
+    }
   }
 
     // const handleSaveInvoices = async () => {
@@ -400,8 +460,8 @@ const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
         <h3 className="text-sm font-bold text-gray-900 mb-2">({invoices?.length || 0}) Total Invoices</h3>
         <div className="flex gap-4 text-xs">
           <span className="text-green-600">{Object.keys(validatedInvoices).length} Valid</span>
-          <span className="text-red-600">0 Invalid</span>
-          <span className="text-yellow-600">{(invoices?.length || 0) - Object.keys(validatedInvoices).length} Pending</span>
+          <span className="text-red-600">{Object.keys(invalidInvoices).length} Invalid</span>
+          <span className="text-yellow-600">{(invoices?.length || 0) - Object.keys(validatedInvoices).length - Object.keys(invalidInvoices).length} Pending</span>
         </div>
       </div>
 
@@ -425,10 +485,15 @@ const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
                     Valid
                   </span>
                 )}
+                {invalidInvoices[invoiceIndex] && (
+                  <span className="px-3 py-1 bg-red-50 text-red-600 border border-red-200 rounded text-xs font-medium">
+                    Invalid
+                  </span>
+                )}
               </div>
-              <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+              {/* <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
                 Show This Invoice
-              </button>
+              </button> */}
             </div>
 
             {/* Table */}
@@ -544,8 +609,18 @@ const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
               </div>
             </div>
 
-            {/* Invalid Reason Box */}
-            {invalidReasonBoxIndex === invoiceIndex && (
+            {/* Invalid Reason Display */}
+            {invalidInvoices[invoiceIndex] && (
+              <div className="mt-4 border-t border-gray-200 pt-4">
+                <h4 className="text-sm font-semibold text-red-600 mb-2">INVALID REASON</h4>
+                <p className="text-xs text-gray-700 bg-red-50 border border-red-200 rounded p-2">
+                  {invalidInvoices[invoiceIndex].reason}
+                </p>
+              </div>
+            )}
+
+            {/* Invalid Reason Input Box */}
+            {invalidReasonBoxIndex === invoiceIndex && !invalidInvoices[invoiceIndex] && (
               <div className="mt-4 border-t border-gray-200 pt-4">
                 <h4 className="text-sm font-semibold text-gray-900 mb-2">INVALID REASON</h4>
                 <input
@@ -581,6 +656,24 @@ const DigitisationTab = ({ digitisationData = {}, invoices, setInvoices }) => {
                   </span>
                   <button
                     onClick={() => handleUndoValid(invoiceIndex)}
+                    className="px-3 py-1 bg-gray-500 text-white rounded text-xs font-medium hover:bg-gray-600"
+                  >
+                    Undo
+                  </button>
+                </>
+              ) : invalidInvoices[invoiceIndex] ? (
+                <>
+                  <span className="px-3 py-1 bg-red-500 text-white rounded text-xs font-medium">
+                    Invalid
+                  </span>
+                  <button
+                    onClick={() => {
+                      if (setInvalidInvoices) {
+                        const updated = { ...invalidInvoices }
+                        delete updated[invoiceIndex]
+                        setInvalidInvoices(updated)
+                      }
+                    }}
                     className="px-3 py-1 bg-gray-500 text-white rounded text-xs font-medium hover:bg-gray-600"
                   >
                     Undo
