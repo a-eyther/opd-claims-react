@@ -26,7 +26,8 @@ const ActionBar = ({ queryCount = 0, onSave, onQueryClick, activeTab, invoices =
         <div className="flex gap-3">
           <button
             onClick={onQueryClick}
-            className="relative px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            disabled
+            className="relative px-6 py-2 text-sm font-medium bg-gray-300 text-gray-500 border border-gray-300 rounded-md cursor-not-allowed transition-colors"
           >
             Query
             {queryCount > 0 && (
