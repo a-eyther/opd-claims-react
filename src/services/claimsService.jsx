@@ -173,6 +173,17 @@ const claimsService = {
     const response = await axiosInstance.post(`/claims/api/claims/${claimUniqueId}/adjudication/manual/finalize/`)
     return response.data
   },
+
+  /**
+   * Submit checklist data for a claim
+   * @param {string} claimUniqueId - Claim unique ID
+   * @param {Object} data - Checklist data
+   * @returns {Promise} API response
+   */
+  submitChecklistData: async (claimUniqueId, data) => {
+    const response = await axiosInstance.put(`/claims/api/claims/${claimUniqueId}/checklist/`, data)
+    return response.data
+  },
 }
 
 export default claimsService
