@@ -14,8 +14,12 @@ import axiosInstance from '../../utils/axios';
  */
 const EditManagement = () => {
   const navigate = useNavigate();
-  const [isMounted, setIsMounted] = useState(false);
+  const isInitialMount = useRef(true);
+  const isSearchInitialized = useRef(
+    sessionStorage.getItem('editManagement_searchInitialized') === 'true'
+  );
   const [searchQuery, setSearchQuery] = useState('');
+  const prevSearchQuery = useRef('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     decision: 'All Decisions',
@@ -28,6 +32,9 @@ const EditManagement = () => {
     dateRange: 'All Time'
   });
 
+  // Track previous filters to detect actual changes
+  const prevFiltersRef = useRef(filters);
+
   const [claimsData, setClaimsData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({
@@ -38,7 +45,9 @@ const EditManagement = () => {
   const [currentPage, setCurrentPage] = useState(() => {
     // Restore saved page from sessionStorage
     const savedPage = sessionStorage.getItem('editManagement_currentPage');
-    return savedPage ? parseInt(savedPage, 10) : 1;
+    const page = savedPage ? parseInt(savedPage, 10) : 1;
+    console.log('EditManagement: Initializing currentPage from sessionStorage:', page);
+    return page;
   });
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize] = useState(10);
@@ -115,37 +124,60 @@ const EditManagement = () => {
     }
   }, [currentPage, filters, searchQuery, pageSize]);
 
-  // Mark component as mounted after first render
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
   // Fetch data when dependencies change
   useEffect(() => {
+    console.log('EditManagement: fetchClaims useEffect triggered, currentPage:', currentPage);
     fetchClaims();
   }, [fetchClaims]);
 
-  // Reset to page 1 when filters change (not on initial mount)
+  // Reset to page 1 when filters actually change (not on initial mount)
   useEffect(() => {
-    if (isMounted) {
-      setCurrentPage(1);
+    if (isInitialMount.current) {
+      console.log('EditManagement: Initial mount, skipping filter reset');
+      isInitialMount.current = false;
+      return;
     }
-  }, [filters, isMounted]);
+
+    // Check if filters actually changed
+    const filtersChanged = JSON.stringify(prevFiltersRef.current) !== JSON.stringify(filters);
+    console.log('EditManagement: Filters changed?', filtersChanged);
+    if (filtersChanged) {
+      console.log('EditManagement: Resetting to page 1 due to filter change');
+      setCurrentPage(1);
+      prevFiltersRef.current = filters;
+    }
+  }, [filters]);
 
   // Reset to page 1 when search changes (debounced, not on initial mount)
   useEffect(() => {
-    if (!isMounted) {
+    if (!isSearchInitialized.current) {
+      console.log('EditManagement: First search render, skipping reset');
+      isSearchInitialized.current = true;
+      sessionStorage.setItem('editManagement_searchInitialized', 'true');
+      prevSearchQuery.current = searchQuery;
       return;
     }
+
+    // Only reset if search query actually changed
+    if (prevSearchQuery.current === searchQuery) {
+      console.log('EditManagement: Search query unchanged, skipping reset');
+      return;
+    }
+
+    console.log('EditManagement: Search query changed from', prevSearchQuery.current, 'to', searchQuery);
+    prevSearchQuery.current = searchQuery;
+
     const timeoutId = setTimeout(() => {
+      console.log('EditManagement: Resetting to page 1 due to search query change');
       setCurrentPage(1);
     }, 1000); // 1000ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, isMounted]);
+  }, [searchQuery]);
 
   // Save current page to sessionStorage whenever it changes
   useEffect(() => {
+    console.log('EditManagement: Saving currentPage to sessionStorage:', currentPage);
     sessionStorage.setItem('editManagement_currentPage', currentPage.toString());
   }, [currentPage]);
 

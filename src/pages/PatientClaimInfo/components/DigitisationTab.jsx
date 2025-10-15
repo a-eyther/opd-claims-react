@@ -501,14 +501,14 @@ const DigitisationTab = ({
               <table className="w-full text-xs border-collapse">
                 <thead className="bg-gray-50">
                   <tr className="border-b border-gray-200">
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">DATE</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">CATEGORY</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">ITEM</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">QTY</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">UNIT</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">AMOUNT</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">PREAUTH</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">DEL</th>
+                    <th className="px-2 py-2 text-left font-semibold text-gray-600 w-64">DATE</th>
+                    <th className="px-2 py-2 text-left font-semibold text-gray-600 w-96">CATEGORY</th>
+                    <th className="px-2 py-2 text-left font-semibold text-gray-600 w-110">ITEM</th>
+                    <th className="px-2 py-2 text-left font-semibold text-gray-600 w-32">QTY</th>
+                    <th className="px-2 py-2 text-left font-semibold text-gray-600 w-48">UNIT</th>
+                    <th className="px-2 py-2 text-left font-semibold text-gray-600 w-48">AMOUNT</th>
+                    <th className="px-2 py-2 text-left font-semibold text-gray-600 w-48">PREAUTH</th>
+                    <th className="px-2 py-2 text-left font-semibold text-gray-600 w-20" title='Delete'>DEL</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 text-black">
@@ -516,7 +516,7 @@ const DigitisationTab = ({
                     const isLocked = validatedInvoices[invoiceIndex] || invalidInvoices[invoiceIndex]
                     return (
                     <tr key={itemIndex} className="hover:bg-gray-50">
-                      <td className="px-3 py-3">
+                      <td className="px-2 py-3">
                         <input
                           type="text"
                           value={item.date}
@@ -525,21 +525,35 @@ const DigitisationTab = ({
                           className={`w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-2 py-3">
                         <select
                           value={item.category}
                           onChange={(e) => handleItemChange(invoiceIndex, itemIndex, 'category', e.target.value)}
                           disabled={isLocked}
                           className={`w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         >
-                          <option>Consultation</option>
-                          <option>Treatment</option>
-                          <option>Imaging</option>
-                          <option>Laboratory</option>
-                          <option>Pharmacy</option>
+                          <option value="Doctor Fees">Doctor Fees</option>
+                          <option value="Basic Services">Basic Services</option>
+                          <option value="Consultation Charges">Consultation Charges</option>
+                          <option value="Daily Charges">Daily Charges</option>
+                          <option value="Diagnostic">Diagnostic</option>
+                          <option value="External Service Lab">External Service Lab</option>
+                          <option value="Facility Charges">Facility Charges</option>
+                          <option value="General Procedures">General Procedures</option>
+                          <option value="Inpatient Stores">Inpatient Stores</option>
+                          <option value="Lab Tests">Lab Test Charges</option>
+                          <option value="Lenses">Lenses</option>
+                          <option value="Medication">Medication</option>
+                          <option value="Medicine">Medicine</option>
+                          <option value="Miscellaneous">Miscellaneous</option>
+                          <option value="Nursing Fee">Nursing Fee</option>
+                          <option value="Optical Frames">Optical Frames</option>
+                          <option value="Pharmacy">Pharmacy Charges</option>
+                          <option value="Physician fees">Physician fees</option>
+                          <option value="Radiology Test Charges">Radiology Test Charges</option>
                         </select>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-2 py-3">
                         <input
                           type="text"
                           value={item.item}
@@ -548,7 +562,7 @@ const DigitisationTab = ({
                           className={`w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-2 py-3">
                         <input
                           type="number"
                           value={item.qty}
@@ -557,7 +571,7 @@ const DigitisationTab = ({
                           className={`w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-2 py-3">
                         <input
                           type="number"
                           value={item.unit}
@@ -566,7 +580,7 @@ const DigitisationTab = ({
                           className={`w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-2 py-3">
                         <input
                           type="number"
                           value={item.amount}
@@ -575,7 +589,7 @@ const DigitisationTab = ({
                           className={`w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-2 py-3">
                         <input
                           type="number"
                           value={item.preauth}
@@ -584,10 +598,11 @@ const DigitisationTab = ({
                           className={`w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-2 py-3">
                         <button
                           onClick={() => handleDeleteItem(invoiceIndex, itemIndex)}
                           disabled={isLocked}
+                          title="Delete"
                           className={`${isLocked ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:text-red-700'}`}
                         >
                           🗑
