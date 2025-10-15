@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/common/PageHeader';
 import StatsCard from '../../components/common/StatsCard';
@@ -14,6 +14,7 @@ import axiosInstance from '../../utils/axios';
  */
 const EditManagement = () => {
   const navigate = useNavigate();
+  const [isMounted, setIsMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -42,8 +43,8 @@ const EditManagement = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize] = useState(10);
 
-  // Fetch claims with filters
-  const fetchClaims = async () => {
+  // Fetch claims with filters - wrapped in useCallback to avoid stale closures
+  const fetchClaims = useCallback(async () => {
     setLoading(true);
     try {
       // Build query parameters
@@ -112,33 +113,36 @@ const EditManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, filters, searchQuery, pageSize]);
 
-  // Initial fetch
+  // Mark component as mounted after first render
   useEffect(() => {
-    fetchClaims();
+    setIsMounted(true);
   }, []);
 
-  // Refetch when filters change (immediate) - reset to page 1
+  // Fetch data when dependencies change
   useEffect(() => {
-    setCurrentPage(1);
     fetchClaims();
-  }, [filters]);
+  }, [fetchClaims]);
 
-  // Refetch when search changes (debounced) - reset to page 1
+  // Reset to page 1 when filters change (not on initial mount)
   useEffect(() => {
+    if (isMounted) {
+      setCurrentPage(1);
+    }
+  }, [filters, isMounted]);
+
+  // Reset to page 1 when search changes (debounced, not on initial mount)
+  useEffect(() => {
+    if (!isMounted) {
+      return;
+    }
     const timeoutId = setTimeout(() => {
       setCurrentPage(1);
-      fetchClaims();
     }, 1000); // 1000ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
-
-  // Refetch when page changes
-  useEffect(() => {
-    fetchClaims();
-  }, [currentPage]);
+  }, [searchQuery, isMounted]);
 
   // Save current page to sessionStorage whenever it changes
   useEffect(() => {

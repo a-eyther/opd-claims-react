@@ -73,19 +73,21 @@ export const buildExtractionPatchPayload = (
     return sum + (invoice.invoice_total_amount || 0)
   }, 0)
 
-  // Build bill_breakup array from all line items across all valid invoices
+  // Build bill_breakup array where each item is wrapped with line_data key
   const billBreakup = []
   validInvoices.forEach(invoice => {
     invoice.line_items?.forEach(item => {
       billBreakup.push({
-        item_name: item.item_name,
-        item_category: item.item_category,
-        unit: item.unit,
-        unit_price: item.unit_price,
-        request_amount: item.request_amount,
-        necessary: item.necessary,
-        message: item.message,
-        invoice_number: invoice.invoice_number
+        line_data: {
+          item_name: item.item_name,
+          item_category: item.item_category,
+          unit: item.unit,
+          unit_price: item.unit_price,
+          request_amount: item.request_amount,
+          necessary: item.necessary,
+          message: item.message,
+          invoice_number: invoice.invoice_number
+        }
       })
     })
   })
