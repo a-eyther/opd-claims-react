@@ -512,21 +512,25 @@ const DigitisationTab = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 text-black">
-                  {invoice.items?.map((item, itemIndex) => (
+                  {invoice.items?.map((item, itemIndex) => {
+                    const isLocked = validatedInvoices[invoiceIndex] || invalidInvoices[invoiceIndex]
+                    return (
                     <tr key={itemIndex} className="hover:bg-gray-50">
                       <td className="px-3 py-3">
                         <input
                           type="text"
                           value={item.date}
                           onChange={(e) => handleItemChange(invoiceIndex, itemIndex, 'date', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          disabled={isLocked}
+                          className={`w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                       </td>
                       <td className="px-3 py-3">
                         <select
                           value={item.category}
                           onChange={(e) => handleItemChange(invoiceIndex, itemIndex, 'category', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          disabled={isLocked}
+                          className={`w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         >
                           <option>Consultation</option>
                           <option>Treatment</option>
@@ -540,7 +544,8 @@ const DigitisationTab = ({
                           type="text"
                           value={item.item}
                           onChange={(e) => handleItemChange(invoiceIndex, itemIndex, 'item', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          disabled={isLocked}
+                          className={`w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                       </td>
                       <td className="px-3 py-3">
@@ -548,7 +553,8 @@ const DigitisationTab = ({
                           type="number"
                           value={item.qty}
                           onChange={(e) => handleItemChange(invoiceIndex, itemIndex, 'qty', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          disabled={isLocked}
+                          className={`w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                       </td>
                       <td className="px-3 py-3">
@@ -556,7 +562,8 @@ const DigitisationTab = ({
                           type="number"
                           value={item.unit}
                           onChange={(e) => handleItemChange(invoiceIndex, itemIndex, 'unit', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          disabled={isLocked}
+                          className={`w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                       </td>
                       <td className="px-3 py-3">
@@ -564,7 +571,8 @@ const DigitisationTab = ({
                           type="number"
                           value={item.amount}
                           onChange={(e) => handleItemChange(invoiceIndex, itemIndex, 'amount', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          disabled={isLocked}
+                          className={`w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                       </td>
                       <td className="px-3 py-3">
@@ -572,19 +580,22 @@ const DigitisationTab = ({
                           type="number"
                           value={item.preauth}
                           onChange={(e) => handleItemChange(invoiceIndex, itemIndex, 'preauth', e.target.value)}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          disabled={isLocked}
+                          className={`w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         />
                       </td>
                       <td className="px-3 py-3">
                         <button
                           onClick={() => handleDeleteItem(invoiceIndex, itemIndex)}
-                          className="text-red-500 hover:text-red-700"
+                          disabled={isLocked}
+                          className={`${isLocked ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:text-red-700'}`}
                         >
                           🗑
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -592,7 +603,12 @@ const DigitisationTab = ({
             {/* Add Item Button */}
             <button
               onClick={() => handleAddItem(invoiceIndex)}
-              className="mt-3 px-3 py-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium"
+              disabled={validatedInvoices[invoiceIndex] || invalidInvoices[invoiceIndex]}
+              className={`mt-3 px-3 py-1.5 text-xs font-medium ${
+                validatedInvoices[invoiceIndex] || invalidInvoices[invoiceIndex]
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : 'text-blue-600 hover:text-blue-700'
+              }`}
             >
               + Add Item
             </button>
