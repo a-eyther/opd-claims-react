@@ -49,6 +49,7 @@ const PatientClaimInfo = () => {
   const [clinicalLoading, setClinicalLoading] = useState(false)
   const [clinicalError, setClinicalError] = useState(null)
   const [rawApiResponse, setRawApiResponse] = useState(null)
+  const [rawExtractionResponse, setRawExtractionResponse] = useState(null)
   const [clinicalSaveFunction, setClinicalSaveFunction] = useState(null)
   const [reviewLoading, setReviewLoading] = useState(false)
   const [isChecklistTabLocked, setIsChecklistTabLocked] = useState(true)
@@ -64,7 +65,9 @@ const PatientClaimInfo = () => {
 
         const response = await claimsService.getClaimExtractionData(claimId)
 
-        // Store raw API response for later use
+        // Store raw extraction response separately for digitisation tab
+        setRawExtractionResponse(response)
+        // Also store in rawApiResponse for backward compatibility
         setRawApiResponse(response)
 
         const transformedData = transformClaimExtractionData(response)
@@ -113,7 +116,7 @@ const PatientClaimInfo = () => {
         setClinicalLoading(true)
         setClinicalError(null)
 
-        // Try to get manual adjudication first
+        // Step 1: Try to get manual adjudication first
         let response = await claimsService.getManualAdjudication(claimId)
 
         // If manual adjudication fails, fetch AI adjudication
@@ -133,6 +136,28 @@ const PatientClaimInfo = () => {
             clinicalValidationInvoices: transformedData.clinicalValidationInvoices,
             financials: transformedData.financials
           }))
+        }
+
+        // Step 2: Trigger re-adjudication after initial data is loaded
+        try {
+          await claimsService.reAdjudicate(claimId)
+          console.log('Re-adjudication triggered successfully')
+
+          // Step 3: Fetch updated AI adjudication data after rerun
+          const updatedAiResponse = await claimsService.getAIAdjudication(claimId)
+          setRawApiResponse(updatedAiResponse)
+
+          const updatedTransformedData = transformAdjudicationData(updatedAiResponse)
+          if (updatedTransformedData) {
+            setClaimData(prevData => ({
+              ...prevData,
+              clinicalValidationInvoices: updatedTransformedData.clinicalValidationInvoices,
+              financials: updatedTransformedData.financials
+            }))
+          }
+        } catch (rerunErr) {
+          console.warn('Re-adjudication or AI fetch after rerun failed:', rerunErr)
+          // Continue with existing data if rerun fails
         }
       } catch (err) {
         console.error('Error fetching clinical validation data:', err)
