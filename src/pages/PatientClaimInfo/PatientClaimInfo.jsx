@@ -34,6 +34,11 @@ const PatientClaimInfo = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedDocumentIndex, setSelectedDocumentIndex] = useState(0)
   const [isQueryModalOpen, setIsQueryModalOpen] = useState(false)
+  const [timerStarted, setTimerStarted] = useState(() => {
+    // Check if timer was already started for this claim
+    const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
+    return savedTimers[claimId] !== undefined
+  })
   const [timeRemaining, setTimeRemaining] = useState(() => {
     // Try to get saved timer value for this claim
     const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
@@ -301,8 +306,12 @@ const PatientClaimInfo = () => {
     }
   }
 
-  // Timer countdown effect with persistence
+  // Timer countdown effect with persistence - only runs when timer is started
   useEffect(() => {
+    if (!timerStarted) {
+      return // Don't start timer until user clicks Save & Continue from patient-info
+    }
+
     const interval = setInterval(() => {
       setTimeRemaining(prevTime => {
         if (prevTime <= 0) {
@@ -321,7 +330,7 @@ const PatientClaimInfo = () => {
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [claimId])
+  }, [claimId, timerStarted])
 
   // Save timer state when component unmounts (user navigates away)
   useEffect(() => {
@@ -367,6 +376,14 @@ const PatientClaimInfo = () => {
 
     // Handle Patient Info tab save
     if (activeTab === 'patient-info') {
+      // Start the timer when user clicks Save & Continue from patient-info tab
+      if (!timerStarted) {
+        setTimerStarted(true)
+        // Initialize timer in sessionStorage
+        const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
+        savedTimers[claimId] = 180 // Start with 180 seconds (3 minutes)
+        sessionStorage.setItem('claimTimers', JSON.stringify(savedTimers))
+      }
       setActiveTab('digitisation')
       return
     }
