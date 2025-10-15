@@ -615,7 +615,7 @@ const PatientClaimInfo = () => {
 
       {/* Footer Action Bar */}
       <ActionBar
-        queryCount={3}
+        queryCount={0}
         onSave={handleSave}
         onQueryClick={handleQueryClick}
         invoices={invoices}

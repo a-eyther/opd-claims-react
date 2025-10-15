@@ -73,12 +73,32 @@ export const buildExtractionPatchPayload = (
     return sum + (invoice.invoice_total_amount || 0)
   }, 0)
 
+  // Build bill_breakup array where each item is wrapped with line_data key
+  const billBreakup = []
+  validInvoices.forEach(invoice => {
+    invoice.line_items?.forEach(item => {
+      billBreakup.push({
+        line_data: {
+          item_name: item.item_name,
+          item_category: item.item_category,
+          unit: item.unit,
+          unit_price: item.unit_price,
+          request_amount: item.request_amount,
+          necessary: item.necessary,
+          message: item.message,
+          invoice_number: invoice.invoice_number
+        }
+      })
+    })
+  })
+
   const updatedBillingDetails = {
     ...(originalOutputData.billing_details || {}),
     total_req_amount: {
       value: totalRequestAmount,
       confidence_score: originalOutputData.billing_details?.total_req_amount?.confidence_score || 0
-    }
+    },
+    bill_breakup: billBreakup
   }
 
   // Build the final payload with only output_data
@@ -89,7 +109,8 @@ export const buildExtractionPatchPayload = (
       medical_info: updatedMedicalInfo,
       billing_details: updatedBillingDetails,
       [originalInvoiceKey]: validInvoices
-    }
+    },
+    trigger_readjudication: true
   }
 
   return payload
