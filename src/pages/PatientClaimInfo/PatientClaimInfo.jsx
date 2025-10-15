@@ -34,6 +34,11 @@ const PatientClaimInfo = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedDocumentIndex, setSelectedDocumentIndex] = useState(0)
   const [isQueryModalOpen, setIsQueryModalOpen] = useState(false)
+  const [timerStarted, setTimerStarted] = useState(() => {
+    // Check if timer was already started for this claim
+    const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
+    return savedTimers[claimId] !== undefined
+  })
   const [timeRemaining, setTimeRemaining] = useState(() => {
     // Try to get saved timer value for this claim
     const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
@@ -109,19 +114,31 @@ const PatientClaimInfo = () => {
 
   // Fetch adjudication data when Clinical Validation tab opens
   useEffect(() => {
+    console.log('Clinical validation useEffect triggered. activeTab:', activeTab, 'claimId:', claimId)
+
     const fetchClinicalData = async () => {
-      if (activeTab !== 'clinical' || !claimId) return
+      if (activeTab !== 'clinical' || !claimId) {
+        console.log('Skipping clinical data fetch. activeTab:', activeTab, 'claimId:', claimId)
+        return
+      }
+
+      console.log('Starting clinical data fetch...')
 
       try {
         setClinicalLoading(true)
         setClinicalError(null)
 
-        // Step 1: Try to get manual adjudication first
-        let response = await claimsService.getManualAdjudication(claimId)
+        let response = null
 
-        // If manual adjudication fails, fetch AI adjudication
-        if (!response.success) {
+        // Step 1: Try to get manual adjudication first, fallback to AI if not found
+        console.log('Fetching manual adjudication...')
+        try {
+          response = await claimsService.getManualAdjudication(claimId)
+          console.log('Manual adjudication response:', response)
+        } catch (manualErr) {
+          console.log('Manual adjudication not found, fetching AI adjudication...')
           response = await claimsService.getAIAdjudication(claimId)
+          console.log('AI adjudication response:', response)
         }
 
         // Store the adjudication response for later use
@@ -140,11 +157,15 @@ const PatientClaimInfo = () => {
 
         // Step 2: Trigger re-adjudication after initial data is loaded
         try {
-          await claimsService.reAdjudicate(claimId)
+          console.log('Calling re-adjudicate API for claimId:', claimId)
+          const rerunResponse = await claimsService.reAdjudicate(claimId)
+          console.log('Re-adjudication API response:', rerunResponse)
           console.log('Re-adjudication triggered successfully')
 
           // Step 3: Fetch updated AI adjudication data after rerun
+          console.log('Fetching updated AI adjudication after rerun...')
           const updatedAiResponse = await claimsService.getAIAdjudication(claimId)
+          console.log('Updated AI adjudication response:', updatedAiResponse)
           setRawApiResponse(updatedAiResponse)
 
           const updatedTransformedData = transformAdjudicationData(updatedAiResponse)
@@ -154,9 +175,15 @@ const PatientClaimInfo = () => {
               clinicalValidationInvoices: updatedTransformedData.clinicalValidationInvoices,
               financials: updatedTransformedData.financials
             }))
+            console.log('Clinical validation data updated with rerun results')
           }
         } catch (rerunErr) {
-          console.warn('Re-adjudication or AI fetch after rerun failed:', rerunErr)
+          console.error('Re-adjudication or AI fetch after rerun failed:', rerunErr)
+          console.error('Error details:', {
+            message: rerunErr.message,
+            response: rerunErr.response?.data,
+            status: rerunErr.response?.status
+          })
           // Continue with existing data if rerun fails
         }
       } catch (err) {
@@ -301,8 +328,12 @@ const PatientClaimInfo = () => {
     }
   }
 
-  // Timer countdown effect with persistence
+  // Timer countdown effect with persistence - only runs when timer is started
   useEffect(() => {
+    if (!timerStarted) {
+      return // Don't start timer until user clicks Save & Continue from patient-info
+    }
+
     const interval = setInterval(() => {
       setTimeRemaining(prevTime => {
         if (prevTime <= 0) {
@@ -321,7 +352,7 @@ const PatientClaimInfo = () => {
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [claimId])
+  }, [claimId, timerStarted])
 
   // Save timer state when component unmounts (user navigates away)
   useEffect(() => {
@@ -367,6 +398,14 @@ const PatientClaimInfo = () => {
 
     // Handle Patient Info tab save
     if (activeTab === 'patient-info') {
+      // Start the timer when user clicks Save & Continue from patient-info tab
+      if (!timerStarted) {
+        setTimerStarted(true)
+        // Initialize timer in sessionStorage
+        const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
+        savedTimers[claimId] = 180 // Start with 180 seconds (3 minutes)
+        sessionStorage.setItem('claimTimers', JSON.stringify(savedTimers))
+      }
       setActiveTab('digitisation')
       return
     }
