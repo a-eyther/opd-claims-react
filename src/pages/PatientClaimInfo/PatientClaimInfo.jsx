@@ -37,7 +37,12 @@ const PatientClaimInfo = () => {
   const [timeRemaining, setTimeRemaining] = useState(() => {
     // Try to get saved timer value for this claim
     const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
-    return savedTimers[claimId] !== undefined ? savedTimers[claimId] : 180
+    return savedTimers[claimId] !== undefined ? savedTimers[claimId] : null
+  })
+  const [timerStarted, setTimerStarted] = useState(() => {
+    // Check if timer has already been started for this claim
+    const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
+    return savedTimers[claimId] !== undefined
   })
   const [claimData, setClaimData] = useState(null)
   const [invoices, setInvoices] = useState([]) //  Added invoices state
@@ -280,8 +285,10 @@ const PatientClaimInfo = () => {
     }
   }
 
-  // Timer countdown effect with persistence
+  // Timer countdown effect with persistence - only runs when timer is started
   useEffect(() => {
+    if (!timerStarted || timeRemaining === null) return
+
     const interval = setInterval(() => {
       setTimeRemaining(prevTime => {
         if (prevTime <= 0) {
@@ -300,16 +307,18 @@ const PatientClaimInfo = () => {
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [claimId])
+  }, [claimId, timerStarted, timeRemaining])
 
   // Save timer state when component unmounts (user navigates away)
   useEffect(() => {
     return () => {
-      const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
-      savedTimers[claimId] = timeRemaining
-      sessionStorage.setItem('claimTimers', JSON.stringify(savedTimers))
+      if (timerStarted && timeRemaining !== null) {
+        const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
+        savedTimers[claimId] = timeRemaining
+        sessionStorage.setItem('claimTimers', JSON.stringify(savedTimers))
+      }
     }
-  }, [claimId, timeRemaining])
+  }, [claimId, timeRemaining, timerStarted])
 
   const tabs = useMemo(() => [
     { id: 'patient-info', label: 'Patient Info. Claim & Policy Details' },
@@ -346,6 +355,17 @@ const PatientClaimInfo = () => {
 
     // Handle Patient Info tab save
     if (activeTab === 'patient-info') {
+      // Start the timer when user clicks Save & Continue on Patient Info tab
+      if (!timerStarted) {
+        setTimerStarted(true)
+        setTimeRemaining(180) // Start with 180 seconds (3 minutes)
+
+        // Save initial timer state to sessionStorage
+        const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
+        savedTimers[claimId] = 180
+        sessionStorage.setItem('claimTimers', JSON.stringify(savedTimers))
+      }
+
       setActiveTab('digitisation')
       return
     }
@@ -547,7 +567,7 @@ const PatientClaimInfo = () => {
         claim_id={claimData.claim_id}
         status={claimData.status}
         benefitType={claimData.benefitType}
-        timeRemaining={timeRemaining}
+        timeRemaining={timeRemaining !== null ? timeRemaining : 180}
         financials={financials}
       />
 
@@ -638,7 +658,7 @@ const PatientClaimInfo = () => {
 
       {/* Footer Action Bar */}
       <ActionBar
-        queryCount={3}
+        queryCount={0}
         onSave={handleSave}
         onQueryClick={handleQueryClick}
         invoices={invoices}
