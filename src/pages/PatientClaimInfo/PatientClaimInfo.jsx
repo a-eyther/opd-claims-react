@@ -169,19 +169,10 @@ const PatientClaimInfo = () => {
           const loggedInUsername = loggedInUser?.username
           setCurrentUsername(loggedInUsername)
 
-          // Determine if view-only mode
-          const isViewOnly = extractedEditStatus === 'AUTOMATED' && extractedAssignedUsername !== loggedInUsername
-          setIsViewOnlyMode(isViewOnly)
-
-          // If EDITED status, unlock all tabs
-          if (extractedEditStatus === 'EDITED') {
-            setIsChecklistTabLocked(false)
-            setIsClinicalTabLocked(false)
-            setIsReviewTabLocked(false)
-          }
-
           // Calculate timer from created_at (10 minutes countdown)
           const createdAt = response?.data?.created_at
+          let isTimeExpired = false
+
           if (createdAt) {
             const createdAtDate = new Date(createdAt)
             const currentDate = new Date()
@@ -201,11 +192,35 @@ const PatientClaimInfo = () => {
             const totalSeconds = 10 * 60
             const remainingSeconds = totalSeconds - elapsedSeconds
 
+            // Check if time has expired
+            isTimeExpired = remainingSeconds <= 0
+
             // Set remaining time (countdown)
             const finalRemaining = remainingSeconds > 0 ? remainingSeconds : 0
             console.log('Setting timeRemaining to:', finalRemaining)
             setTimeRemaining(finalRemaining)
             setTimerStarted(true)
+          }
+
+          // Determine if view-only mode
+          // View-only if: (AUTOMATED status AND different user) OR time expired
+          const isViewOnly = (extractedEditStatus === 'AUTOMATED' && extractedAssignedUsername !== loggedInUsername) || isTimeExpired
+
+          console.log('View-only mode calculation:', {
+            extractedEditStatus,
+            extractedAssignedUsername,
+            loggedInUsername,
+            isTimeExpired,
+            isViewOnly
+          })
+
+          setIsViewOnlyMode(isViewOnly)
+
+          // If EDITED status, unlock all tabs
+          if (extractedEditStatus === 'EDITED') {
+            setIsChecklistTabLocked(false)
+            setIsClinicalTabLocked(false)
+            setIsReviewTabLocked(false)
           }
         } else {
           console.warn('Transformation failed, using mock data')
