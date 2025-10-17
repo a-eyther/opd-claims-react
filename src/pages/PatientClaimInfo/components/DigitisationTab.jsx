@@ -659,7 +659,7 @@ const DigitisationTab = ({
                   value={invalidReasons[invoiceIndex] || ''}
                   onChange={(e) => handleInvalidReasonChange(invoiceIndex, e.target.value)}
                   placeholder="Enter reason for marking this invoice as invalid..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 mb-3"
+                  className="w-full px-3 py-2 border text-black border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 mb-3"
                 />
                 <div className="flex gap-2">
                   <button
