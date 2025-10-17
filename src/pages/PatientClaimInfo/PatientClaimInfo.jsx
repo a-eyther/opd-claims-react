@@ -528,12 +528,6 @@ const PatientClaimInfo = () => {
   const handleSave = async () => {
     if (!claimId) return
 
-    // If in view-only mode, don't allow saves (this should not happen as button is hidden)
-    if (isViewOnlyMode) {
-      console.warn('Cannot save in view-only mode')
-      return
-    }
-
     // Handle Patient Info tab save
     if (activeTab === 'patient-info') {
       setActiveTab('digitisation')

@@ -52,7 +52,7 @@ const ActionBar = ({
 
           {!hideSaveButton && (
             <button
-              onClick={isViewOnlyMode ? onContinue : onSave}
+              onClick={onSave}
               disabled={hasPendingInvoices}
               className={`px-6 py-2 text-sm font-medium rounded-md transition-colors ${
                 hasPendingInvoices
