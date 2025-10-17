@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import {useState, useEffect, useRef} from 'react';
 import claimsService from '../../../services/claimsService';
 
 /**
@@ -20,6 +20,30 @@ const EditFilters = ({ filters, onFilterChange }) => {
     decisions: []
   });
   const [loading, setLoading] = useState(true);
+
+  // Searchable provider and benefit type states
+
+    const [providerSearch, setProviderSearch] = useState('');
+    const [benefitSearch, setBenefitSearch] = useState('');
+    const [showProviderDropdown, setShowProviderDropdown] = useState(false);
+    const [showBenefitDropdown, setShowBenefitDropdown] = useState(false);
+
+    const providerRef = useRef(null);
+    const benefitRef = useRef(null);
+
+  //   When user will click outside then the dropdown should close
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (providerRef.current && !providerRef.current.contains(e.target)){
+                setShowProviderDropdown(false);
+            }
+            if (benefitRef.current && !benefitRef.current.contains(e.target)){
+                setShowBenefitDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
   // Fetch dropdown options on component mount
   useEffect(() => {
@@ -101,6 +125,14 @@ const EditFilters = ({ filters, onFilterChange }) => {
     });
   };
 
+  // provider and benefit list filtered
+    const filteredProviders = dropdownOptions.providers.filter((p) =>
+        p.name.toLowerCase().includes(providerSearch.toLowerCase())
+    );
+    const filteredBenefits = dropdownOptions.benefitTypes.filter((b) =>
+        b.label.toLowerCase().includes(benefitSearch.toLowerCase())
+    );
+
   return (
     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-black">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -122,40 +154,99 @@ const EditFilters = ({ filters, onFilterChange }) => {
           </select>
         </div>
 
-        {/* Provider Filter */}
-        <div>
+        {/* Provider Filter with search functionality */}
+        <div ref={providerRef} className="relative">
           <label className="block text-sm font-medium mb-2">Provider</label>
-          <select
-            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={filters.provider}
-            onChange={(e) => onFilterChange({ ...filters, provider: e.target.value })}
-            disabled={loading}
-          >
-            <option value="All Providers">All Providers</option>
-            {dropdownOptions.providers.map((provider) => (
-              <option key={provider.id} value={provider.name}>
-                {provider.name}
-              </option>
-            ))}
-          </select>
+            <div onClick={() => setShowProviderDropdown(!showProviderDropdown)}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm cursor-pointer focus:ring-2 focus:ring-blue-500"
+            >
+                {filters.provider || 'All Providers'}
+            </div>
+
+            {showProviderDropdown && (
+            <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+              <div className="sticky top-0 bg-white p-2 border-b">
+                <input
+                  type="text"
+                  placeholder="Search providers..."
+                  value={providerSearch}
+                  onChange={(e) => setProviderSearch(e.target.value)}
+                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="p-1">
+                <div
+                  className="px-3 py-1.5 text-sm hover:bg-blue-50 rounded cursor-pointer"
+                  onClick={() => {
+                    onFilterChange({ ...filters, provider: 'All Providers' });
+                    setShowProviderDropdown(false);
+                  }}
+                >
+                  All Providers
+                </div>
+                {filteredProviders.map((provider) => (
+                  <div
+                    key={provider.id}
+                    className="px-3 py-1.5 text-sm hover:bg-blue-50 rounded cursor-pointer"
+                    onClick={() => {
+                      onFilterChange({ ...filters, provider: provider.name });
+                      setShowProviderDropdown(false);
+                    }}
+                  >
+                    {provider.name}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Benefit Type Filter */}
-        <div>
+        {/* Benefit Type Filter with search functionality */}
+        <div ref={benefitRef} className="relative">
           <label className="block text-sm font-medium mb-2">Benefit Type</label>
-          <select
-            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={filters.benefitType}
-            onChange={(e) => onFilterChange({ ...filters, benefitType: e.target.value })}
-            disabled={loading}
+          <div
+            onClick={() => setShowBenefitDropdown(!showBenefitDropdown)}
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm cursor-pointer focus:ring-2 focus:ring-blue-500"
           >
-            <option value="All Benefit Types">All Benefit Types</option>
-            {dropdownOptions.benefitTypes.map((benefitType) => (
-              <option key={benefitType.value} value={benefitType.value}>
-                {benefitType.label}
-              </option>
-            ))}
-          </select>
+            {filters.benefitType || 'All Benefit Types'}
+          </div>
+
+          {showBenefitDropdown && (
+            <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+              <div className="sticky top-0 bg-white p-2 border-b">
+                <input
+                  type="text"
+                  placeholder="Search benefit types..."
+                  value={benefitSearch}
+                  onChange={(e) => setBenefitSearch(e.target.value)}
+                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="p-1">
+                <div
+                  className="px-3 py-1.5 text-sm hover:bg-blue-50 rounded cursor-pointer"
+                  onClick={() => {
+                    onFilterChange({ ...filters, benefitType: 'All Benefit Types' });
+                    setShowBenefitDropdown(false);
+                  }}
+                >
+                  All Benefit Types
+                </div>
+                {filteredBenefits.map((benefitType) => (
+                  <div
+                    key={benefitType.value}
+                    className="px-3 py-1.5 text-sm hover:bg-blue-50 rounded cursor-pointer"
+                    onClick={() => {
+                      onFilterChange({ ...filters, benefitType: benefitType.value });
+                      setShowBenefitDropdown(false);
+                    }}
+                  >
+                    {benefitType.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Date Range Filter */}
