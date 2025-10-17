@@ -65,6 +65,7 @@ const PatientClaimInfo = () => {
   const [isViewOnlyMode, setIsViewOnlyMode] = useState(false)
   const [showTimeoutModal, setShowTimeoutModal] = useState(false)
   const [currentUsername, setCurrentUsername] = useState(null)
+  const [showAssignmentErrorModal, setShowAssignmentErrorModal] = useState(false)
 
   // Call assignment API on component mount (only if not already assigned)
   useEffect(() => {
@@ -97,10 +98,25 @@ const PatientClaimInfo = () => {
                            !isTimeExpired
 
         if (shouldAssign) {
-          await claimsService.assignClaim(claimId, { duration_minutes: 10 })
+          const response = await claimsService.assignClaim(claimId, { duration_minutes: 10 })
+
+          console.log('Assignment API Response:', response)
+
+          // Check if assignment failed (response.data might have success field)
+          if (response && response.success === false) {
+            console.log('Assignment failed - showing modal')
+            setShowAssignmentErrorModal(true)
+          }
         }
       } catch (err) {
         console.error('Error assigning claim:', err)
+        console.log('Error response data:', err.response?.data)
+
+        // Check if error response has success: false
+        if (err.response?.data?.success === false) {
+          console.log('Assignment error - showing modal')
+          setShowAssignmentErrorModal(true)
+        }
       }
     }
 
@@ -169,14 +185,26 @@ const PatientClaimInfo = () => {
           if (createdAt) {
             const createdAtDate = new Date(createdAt)
             const currentDate = new Date()
-            const elapsedSeconds = Math.floor((currentDate - createdAtDate) / 1000)
+            const elapsedMilliseconds = currentDate.getTime() - createdAtDate.getTime()
+            const elapsedSeconds = Math.floor(elapsedMilliseconds / 1000)
+
+            console.log('Timer Debug:', {
+              createdAt,
+              createdAtDate: createdAtDate.toString(),
+              currentDate: currentDate.toString(),
+              elapsedMilliseconds,
+              elapsedSeconds,
+              elapsedMinutes: (elapsedSeconds / 60).toFixed(2)
+            })
 
             // 10 minutes = 600 seconds
             const totalSeconds = 10 * 60
             const remainingSeconds = totalSeconds - elapsedSeconds
 
             // Set remaining time (countdown)
-            setTimeRemaining(remainingSeconds > 0 ? remainingSeconds : 0)
+            const finalRemaining = remainingSeconds > 0 ? remainingSeconds : 0
+            console.log('Setting timeRemaining to:', finalRemaining)
+            setTimeRemaining(finalRemaining)
             setTimerStarted(true)
           }
         } else {
@@ -603,6 +631,9 @@ const PatientClaimInfo = () => {
     } else if (activeTab === 'clinical') {
       setIsReviewTabLocked(false)
       setActiveTab('review')
+    } else if (activeTab === 'review') {
+      // On review tab, navigate back to EditManagement page
+      navigate('/claims')
     }
   }
 
@@ -646,6 +677,33 @@ const PatientClaimInfo = () => {
   }
 
   // Loading state
+  // Show assignment error modal first (highest priority)
+  if (showAssignmentErrorModal) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+          <div className="text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
+              <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Claim Under Process</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              This claim is currently under process. Please try opening it after some time.
+            </p>
+            <button
+              onClick={() => navigate('/claims')}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+            >
+              Back to Claims List
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="h-screen bg-gray-50 flex items-center justify-center">
@@ -699,7 +757,7 @@ const PatientClaimInfo = () => {
         claim_id={claimData.claim_id}
         status={claimData.status}
         benefitType={claimData.benefitType}
-        timeRemaining={timeRemaining !== null ? timeRemaining : 180}
+        timeRemaining={timeRemaining !== null && timeRemaining !== undefined ? timeRemaining : 0}
         financials={financials}
       />
 
@@ -837,6 +895,7 @@ const PatientClaimInfo = () => {
           </div>
         </div>
       )}
+
     </div>
   )
 }

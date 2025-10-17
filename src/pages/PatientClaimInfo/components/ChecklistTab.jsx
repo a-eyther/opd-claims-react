@@ -99,77 +99,77 @@ const ChecklistTab = ({ lctClaimRequest, invoices = [], onSave }) => {
             {/* Left Column */}
             <div className="space-y-3">
               {/* Invoice Number */}
-              <div className="flex items-start gap-2">
+              <label className="flex items-start gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={checklistStates[index]?.invoice_number || false}
                   onChange={() => handleCheckboxChange(index, 'invoice_number')}
-                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                 />
                 <div>
                   <div className="text-xs font-semibold text-gray-900">Invoice Number</div>
                   <div className="text-xs text-gray-600">{invoice.invoice_number || invoice.invoiceNumber}</div>
                 </div>
-              </div>
+              </label>
 
               {/* Visit Number */}
-              <div className="flex items-start gap-2">
+              <label className="flex items-start gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={checklistStates[index]?.visit_number || false}
                   onChange={() => handleCheckboxChange(index, 'visit_number')}
-                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                 />
                 <div>
                   <div className="text-xs font-semibold text-gray-900">Visit Number</div>
                   <div className="text-xs text-gray-600">{visitNumber}</div>
                 </div>
-              </div>
+              </label>
 
               {/* Total Amount */}
-              <div className="flex items-start gap-2">
+              <label className="flex items-start gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={checklistStates[index]?.total_amount || false}
                   onChange={() => handleCheckboxChange(index, 'total_amount')}
-                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                 />
                 <div>
                   <div className="text-xs font-semibold text-gray-900">Total Amount</div>
                   <div className="text-xs text-gray-600">₹{invoice.invoice_amount || invoice.invoice_amount}</div>
                 </div>
-              </div>
+              </label>
             </div>
 
             {/* Right Column */}
             <div className="space-y-3">
               {/* Beneficiary Name */}
-              <div className="flex items-start gap-2">
+              <label className="flex items-start gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={checklistStates[index]?.beneficiary_name || false}
                   onChange={() => handleCheckboxChange(index, 'beneficiary_name')}
-                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                 />
                 <div>
                   <div className="text-xs font-semibold text-gray-900">Beneficiary Name</div>
                   <div className="text-xs text-gray-600">{patientName}</div>
                 </div>
-              </div>
+              </label>
 
               {/* Invoice Date */}
-              <div className="flex items-start gap-2">
+              <label className="flex items-start gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={checklistStates[index]?.invoice_date || false}
                   onChange={() => handleCheckboxChange(index, 'invoice_date')}
-                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                 />
                 <div>
                   <div className="text-xs font-semibold text-gray-900">Invoice Date</div>
                   <div className="text-xs text-gray-600">{invoice.invoice_date || invoice.invoiceDate}</div>
                 </div>
-              </div>
+              </label>
             </div>
           </div>
         </div>
