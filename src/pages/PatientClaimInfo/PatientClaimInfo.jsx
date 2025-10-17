@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
+import { selectUser } from '../../store/slices/authSlice'
 import ClaimHeader from './components/ClaimHeader'
 import TabNavigation from './components/TabNavigation'
 import DocumentViewer from '../../components/common/DocumentViewer'
@@ -31,27 +32,15 @@ const PatientClaimInfo = () => {
   const selectedDiagnoses = useSelector(state => state.diagnosis?.selectedDiagnoses || [])
   // Get assignment status from Redux store
   const assignmentStatus = useSelector(state => state.claims?.assignmentStatus || null)
+  // Get logged in user from Redux store
+  const loggedInUser = useSelector(selectUser)
 
   const [activeTab, setActiveTab] = useState('patient-info')
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedDocumentIndex, setSelectedDocumentIndex] = useState(0)
   const [isQueryModalOpen, setIsQueryModalOpen] = useState(false)
-  const [timeRemaining, setTimeRemaining] = useState(() => {
-    // Try to get saved timer value for this claim
-    const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
-    return savedTimers[claimId] !== undefined ? savedTimers[claimId] : 180
-  })
-  const [timerStarted, setTimerStarted] = useState(() => {
-    // Check if timer has already been started for this claim
-    const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
-    // If timer exists, it's already started, otherwise start it now
-    if (savedTimers[claimId] === undefined) {
-      // Initialize timer for new claim
-      savedTimers[claimId] = 180
-      sessionStorage.setItem('claimTimers', JSON.stringify(savedTimers))
-    }
-    return true
-  })
+  const [timeRemaining, setTimeRemaining] = useState(null)
+  const [timerStarted, setTimerStarted] = useState(false)
   const [claimData, setClaimData] = useState(null)
   const [invoices, setInvoices] = useState([]) //  Added invoices state
   const [validatedInvoices, setValidatedInvoices] = useState({}) // Track validated invoices
@@ -74,6 +63,8 @@ const PatientClaimInfo = () => {
   const [editStatus, setEditStatus] = useState(null)
   const [assignedUsername, setAssignedUsername] = useState(null)
   const [isViewOnlyMode, setIsViewOnlyMode] = useState(false)
+  const [showTimeoutModal, setShowTimeoutModal] = useState(false)
+  const [currentUsername, setCurrentUsername] = useState(null)
 
   // Call assignment API on component mount (only if not already assigned)
   useEffect(() => {
@@ -85,13 +76,25 @@ const PatientClaimInfo = () => {
           return
         }
 
+        // Calculate time remaining from created_at
+        const createdAt = assignmentStatus.created_at
+        let isTimeExpired = false
+        if (createdAt) {
+          const createdAtDate = new Date(createdAt)
+          const currentDate = new Date()
+          const elapsedSeconds = Math.floor((currentDate - createdAtDate) / 1000)
+          const totalSeconds = 10 * 60 // 10 minutes
+          const remainingSeconds = totalSeconds - elapsedSeconds
+          isTimeExpired = remainingSeconds <= 0
+        }
+
         // Only call assignment API if:
         // 1. Not already assigned
         // 2. Not expired
-        // 3. time_remaining_minutes >= 1
+        // 3. Time not expired (calculated from created_at)
         const shouldAssign = !assignmentStatus.is_assigned &&
                            !assignmentStatus.is_expired &&
-                           (assignmentStatus.time_remaining_minutes || 0) >= 1
+                           !isTimeExpired
 
         if (shouldAssign) {
           await claimsService.assignClaim(claimId, { duration_minutes: 10 })
@@ -146,8 +149,9 @@ const PatientClaimInfo = () => {
           setEditStatus(extractedEditStatus)
           setAssignedUsername(extractedAssignedUsername)
 
-          // Get current logged in username from localStorage or session
-          const loggedInUsername = localStorage.getItem('username') || sessionStorage.getItem('username')
+          // Get current logged in username from Redux store
+          const loggedInUsername = loggedInUser?.username
+          setCurrentUsername(loggedInUsername)
 
           // Determine if view-only mode
           const isViewOnly = extractedEditStatus === 'AUTOMATED' && extractedAssignedUsername !== loggedInUsername
@@ -158,6 +162,22 @@ const PatientClaimInfo = () => {
             setIsChecklistTabLocked(false)
             setIsClinicalTabLocked(false)
             setIsReviewTabLocked(false)
+          }
+
+          // Calculate timer from created_at (10 minutes countdown)
+          const createdAt = response?.data?.created_at
+          if (createdAt) {
+            const createdAtDate = new Date(createdAt)
+            const currentDate = new Date()
+            const elapsedSeconds = Math.floor((currentDate - createdAtDate) / 1000)
+
+            // 10 minutes = 600 seconds
+            const totalSeconds = 10 * 60
+            const remainingSeconds = totalSeconds - elapsedSeconds
+
+            // Set remaining time (countdown)
+            setTimeRemaining(remainingSeconds > 0 ? remainingSeconds : 0)
+            setTimerStarted(true)
           }
         } else {
           console.warn('Transformation failed, using mock data')
@@ -378,7 +398,7 @@ const PatientClaimInfo = () => {
     }
   }
 
-  // Timer countdown effect with persistence - only runs when timer is started
+  // Timer countdown effect - counts down from 10 minutes
   useEffect(() => {
     if (!timerStarted || timeRemaining === null) return
 
@@ -386,32 +406,22 @@ const PatientClaimInfo = () => {
       setTimeRemaining(prevTime => {
         if (prevTime <= 0) {
           clearInterval(interval)
+
+          // Show timeout modal if timer expires and user is assigned to this claim
+          if (assignedUsername && currentUsername && assignedUsername === currentUsername) {
+            setShowTimeoutModal(true)
+          }
+
           return 0
         }
-        const newTime = prevTime - 1
-
-        // Save timer state to sessionStorage
-        const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
-        savedTimers[claimId] = newTime
-        sessionStorage.setItem('claimTimers', JSON.stringify(savedTimers))
-
-        return newTime
+        // Count down (decrement time)
+        return prevTime - 1
       })
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [claimId, timerStarted, timeRemaining])
+  }, [timerStarted, timeRemaining, assignedUsername, currentUsername])
 
-  // Save timer state when component unmounts (user navigates away)
-  useEffect(() => {
-    return () => {
-      if (timerStarted && timeRemaining !== null) {
-        const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
-        savedTimers[claimId] = timeRemaining
-        sessionStorage.setItem('claimTimers', JSON.stringify(savedTimers))
-      }
-    }
-  }, [claimId, timeRemaining, timerStarted])
 
   const tabs = useMemo(() => [
     { id: 'patient-info', label: 'Patient Info. Claim & Policy Details' },
@@ -562,12 +572,7 @@ const PatientClaimInfo = () => {
     // Handle Review tab save - Finalize adjudication
     if (activeTab === 'review') {
       try {
-        const response = await claimsService.finalizeManualAdjudication(claimId)
-
-        // Clear timer for this claim since it's completed
-        const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
-        delete savedTimers[claimId]
-        sessionStorage.setItem('claimTimers', JSON.stringify(savedTimers))
+        await claimsService.finalizeManualAdjudication(claimId)
 
         // alert('Claim adjudication finalized successfully!')
 
@@ -599,13 +604,6 @@ const PatientClaimInfo = () => {
       setIsReviewTabLocked(false)
       setActiveTab('review')
     }
-  }
-
-  // Helper function to clear timer for completed claims (optional)
-  const clearClaimTimer = (claimIdToClear) => {
-    const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
-    delete savedTimers[claimIdToClear]
-    sessionStorage.setItem('claimTimers', JSON.stringify(savedTimers))
   }
 
   // Handle rerun success - update clinical validation data
@@ -814,6 +812,31 @@ const PatientClaimInfo = () => {
         onClose={() => setIsQueryModalOpen(false)}
         claimId={claimData.claimId}
       />
+
+      {/* Timer Timeout Modal */}
+      {showTimeoutModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Time Elapsed</h3>
+              <p className="text-sm text-gray-600 mb-6">
+                Your allocated time for this claim has expired. You can work on other claims.
+              </p>
+              <button
+                onClick={() => navigate('/claims')}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+              >
+                Back to Claims List
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
