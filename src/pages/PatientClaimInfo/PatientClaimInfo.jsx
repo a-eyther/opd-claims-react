@@ -502,20 +502,20 @@ const PatientClaimInfo = () => {
         )
 
         if (!payload) {
-          alert('Failed to build update payload. Please try again.')
+          // alert('Failed to build update payload. Please try again.')
           return
         }
 
         // Call PATCH API with the constructed payload
         await claimsService.patchClaimExtractionData(claimId, payload)
-        alert('Extraction data saved successfully!')
+        // alert('Extraction data saved successfully!')
 
         // Unlock checklist tab and navigate to it
         setIsChecklistTabLocked(false)
         setActiveTab('checklist')
       } catch (err) {
         console.error('Error updating extraction data:', err)
-        alert('Failed to save extraction data. Please try again.')
+        // alert('Failed to save extraction data. Please try again.')
       }
       return
     }
@@ -530,7 +530,7 @@ const PatientClaimInfo = () => {
 
           // Submit checklist data to API
           await claimsService.submitChecklistData(claimId, checklistData)
-          alert('Checklist data saved successfully!')
+          // alert('Checklist data saved successfully!')
         } else {
           console.error('checklistSaveFunction is not a function:', checklistSaveFunction)
           throw new Error('Checklist save function not initialized')
@@ -541,7 +541,7 @@ const PatientClaimInfo = () => {
         setActiveTab('clinical')
       } catch (err) {
         console.error('Error saving checklist data:', err)
-        alert('Failed to save checklist data. Please try again.')
+        // alert('Failed to save checklist data. Please try again.')
       }
       return
     }
@@ -569,13 +569,13 @@ const PatientClaimInfo = () => {
         delete savedTimers[claimId]
         sessionStorage.setItem('claimTimers', JSON.stringify(savedTimers))
 
-        alert('Claim adjudication finalized successfully!')
+        // alert('Claim adjudication finalized successfully!')
 
         // Navigate back to claims list
         navigate('/claims')
       } catch (err) {
         console.error('Error finalizing adjudication:', err)
-        alert('Failed to finalize adjudication. Please try again.')
+        // alert('Failed to finalize adjudication. Please try again.')
       }
     }
   }
