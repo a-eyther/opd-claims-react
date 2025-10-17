@@ -5,13 +5,29 @@ import { ArrowLeftIcon } from '../../../components/icons'
  * Action Bar Component
  * Displays bottom action bar with navigation and action buttons
  */
-const ActionBar = ({ queryCount = 0, onSave, onQueryClick, activeTab, invoices = [], validatedInvoices = {} }) => {
+const ActionBar = ({
+  queryCount = 0,
+  onSave,
+  onQueryClick,
+  activeTab,
+  invoices = [],
+  validatedInvoices = {},
+  editStatus = null,
+  isViewOnlyMode = false,
+  onContinue = null
+}) => {
   const navigate = useNavigate()
 
   // Calculate if there are pending invoices in digitisation tab
   const hasPendingInvoices = activeTab === 'digitisation' &&
     invoices.length > 0 &&
     Object.keys(validatedInvoices).length < invoices.length
+
+  // Hide Save & Continue button if EDITED status
+  const hideSaveButton = editStatus === 'EDITED'
+
+  // Show Continue button instead of Save & Continue if view-only mode
+  const showContinueButton = isViewOnlyMode
 
   return (
     <div className="bg-white border-t border-gray-200 px-6 py-4">
@@ -36,17 +52,29 @@ const ActionBar = ({ queryCount = 0, onSave, onQueryClick, activeTab, invoices =
               </span>
             )}
           </button>
-          <button
-            onClick={onSave}
-            disabled={hasPendingInvoices}
-            className={`px-6 py-2 text-sm font-medium rounded-md transition-colors ${
-              hasPendingInvoices
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
-          >
-            Save & Continue
-          </button>
+
+          {!hideSaveButton && !showContinueButton && (
+            <button
+              onClick={onSave}
+              disabled={hasPendingInvoices}
+              className={`px-6 py-2 text-sm font-medium rounded-md transition-colors ${
+                hasPendingInvoices
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              Save & Continue
+            </button>
+          )}
+
+          {showContinueButton && (
+            <button
+              onClick={onContinue}
+              className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Continue
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -14,7 +14,8 @@ const ClinicalValidationTab = ({
   claimUniqueId = null,
   onSave = null,
   onRerunSuccess = null,
-  onShowInvoice = null
+  onShowInvoice = null,
+  onInvoiceItemsChange = null
 }) => {
   const [invoiceItems, setInvoiceItems] = useState(invoices)
   const [updating, setUpdating] = useState(false)
@@ -27,14 +28,24 @@ const ClinicalValidationTab = ({
     setHasChanges(false)
   }, [invoices])
 
+  // Notify parent when invoice items change
+  useEffect(() => {
+    if (onInvoiceItemsChange) {
+      onInvoiceItemsChange(invoiceItems)
+    }
+  }, [invoiceItems, onInvoiceItemsChange])
+
   // Calculate totals from invoice items
   const calculatedTotals = invoiceItems.reduce((acc, invoice) => {
     invoice.items?.forEach(item => {
       acc.totalApproved += parseFloat(item.appAmt) || 0
-      acc.totalSavings += parseFloat(item.savings) || 0
+      acc.totalInvoiced += parseFloat(item.invAmt) || 0
     })
     return acc
-  }, { totalApproved: 0, totalSavings: 0 })
+  }, { totalApproved: 0, totalInvoiced: 0 })
+
+  // Get total savings from adjudication_response
+  const totalSavingsFromAPI = rawApiResponse?.data?.adjudication_response?.total_savings || 0
 
   const editorReasonOptions = [
     'No reason',
@@ -61,12 +72,21 @@ const ClinicalValidationTab = ({
       // Clone the adjudication_response from raw API response
       const adjudicationResponse = JSON.parse(JSON.stringify(rawApiResponse.data.adjudication_response))
 
+      console.log('Invoice Items before saving:', invoiceItems)
+      console.log('Original billing_data:', adjudicationResponse.billing_data)
+
       // Update all items in billing_data
       let globalItemIndex = 0
       invoiceItems.forEach((invoice) => {
         invoice.items.forEach((item) => {
           if (adjudicationResponse.billing_data && adjudicationResponse.billing_data[globalItemIndex]) {
             const billingItem = adjudicationResponse.billing_data[globalItemIndex]
+
+            console.log(`Updating item ${globalItemIndex}:`, {
+              appQty: item.appQty,
+              appAmt: item.appAmt,
+              editorReason: item.editorReason
+            })
 
             // Map the fields: APP QTY -> approved_quantity, APP AMT -> approved_amount, Editor Reason -> editor_reason
             billingItem.approved_quantity = parseFloat(item.appQty) || 0
@@ -85,10 +105,29 @@ const ClinicalValidationTab = ({
         })
       })
 
+      console.log('Updated billing_data:', JSON.parse(JSON.stringify(adjudicationResponse.billing_data)))
+
+      // Recalculate total_allowed_amount and total_savings
+      let totalAllowedAmount = 0
+
+      adjudicationResponse.billing_data.forEach(item => {
+        totalAllowedAmount += item.approved_amount || 0
+      })
+
+      // Calculate total_savings as total_request_amount - total_allowed_amount
+      const totalRequestAmount = adjudicationResponse.total_request_amount || 0
+      const totalSavings = totalRequestAmount - totalAllowedAmount
+
+      // Update adjudication_response totals
+      adjudicationResponse.total_allowed_amount = totalAllowedAmount
+      adjudicationResponse.total_savings = totalSavings < 0 ? 0 : totalSavings
+
       // Prepare the payload with the entire adjudication_response
       const payload = {
         adjudication_response: adjudicationResponse
       }
+
+      console.log('Final payload being sent to API:', JSON.parse(JSON.stringify(payload)))
 
       // Call the API
       const response = await claimsService.updateManualAdjudication(claimUniqueId, payload)
@@ -226,17 +265,18 @@ const ClinicalValidationTab = ({
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-6">
-        {/* Total Invoiced Amount */}
-        <div className="border border-gray-300 rounded-lg p-4 bg-white">
-          <div className="text-[10px] text-gray-600 uppercase mb-1">TOTAL INVOICED AMOUNT</div>
-          <div className="text-lg font-bold text-gray-900">KES {financials.totalInvoiced?.toLocaleString()}</div>
-        </div>
-
         {/* Total Requested Amount */}
         <div className="border border-gray-300 rounded-lg p-4 bg-white">
           <div className="text-[10px] text-gray-600 uppercase mb-1">TOTAL REQUESTED AMOUNT</div>
           <div className="text-lg font-bold text-gray-900">KES {financials.totalRequested?.toLocaleString()}</div>
         </div>
+        {/* Total Invoiced Amount */}
+        <div className="border border-gray-300 rounded-lg p-4 bg-white">
+          <div className="text-[10px] text-gray-600 uppercase mb-1">TOTAL INVOICED AMOUNT</div>
+          <div className="text-lg font-bold text-gray-900">KES {calculatedTotals.totalInvoiced.toLocaleString()}</div>
+        </div>
+
+        
 
         {/* Total Approved Amount */}
         <div className="border border-gray-300 rounded-lg p-4 bg-white">
@@ -247,7 +287,7 @@ const ClinicalValidationTab = ({
         {/* Total Savings Amount */}
         <div className="border border-gray-300 rounded-lg p-4 bg-white">
           <div className="text-[10px] text-red-600 uppercase mb-1">TOTAL SAVINGS AMOUNT</div>
-          <div className="text-lg font-bold text-red-600">KES {calculatedTotals.totalSavings.toLocaleString()}</div>
+          <div className="text-lg font-bold text-red-600">KES {totalSavingsFromAPI.toLocaleString()}</div>
         </div>
       </div>
 

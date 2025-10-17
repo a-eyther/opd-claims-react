@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/common/PageHeader';
 import StatsCard from '../../components/common/StatsCard';
 import SearchBar from '../../components/common/SearchBar';
@@ -13,7 +12,6 @@ import axiosInstance from '../../utils/axios';
  * Displays claims data with stats, search, and table
  */
 const EditManagement = () => {
-  const navigate = useNavigate();
   const isInitialMount = useRef(true);
   const isSearchInitialized = useRef(
     sessionStorage.getItem('editManagement_searchInitialized') === 'true'
@@ -181,13 +179,6 @@ const EditManagement = () => {
     sessionStorage.setItem('editManagement_currentPage', currentPage.toString());
   }, [currentPage]);
 
-  // Handle row click - navigate to PatientClaimInfo with claim_unique_id
-  const handleRowClick = (claim) => {
-    if (claim.claim_unique_id) {
-      navigate(`/claim/${claim.claim_unique_id}`);
-    }
-  };
-
   return (
     <div>
       {/* Page Header */}
@@ -264,7 +255,6 @@ const EditManagement = () => {
           data={claimsData}
           rowsPerPage={pageSize}
           loading={loading}
-          onRowClick={handleRowClick}
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}

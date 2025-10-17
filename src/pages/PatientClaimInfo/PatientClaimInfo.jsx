@@ -29,6 +29,8 @@ const PatientClaimInfo = () => {
   // Get selected symptoms and diagnoses from Redux store
   const selectedSymptoms = useSelector(state => state.symptoms?.selectedSymptoms || [])
   const selectedDiagnoses = useSelector(state => state.diagnosis?.selectedDiagnoses || [])
+  // Get assignment status from Redux store
+  const assignmentStatus = useSelector(state => state.claims?.assignmentStatus || null)
 
   const [activeTab, setActiveTab] = useState('patient-info')
   const [currentPage, setCurrentPage] = useState(1)
@@ -37,12 +39,18 @@ const PatientClaimInfo = () => {
   const [timeRemaining, setTimeRemaining] = useState(() => {
     // Try to get saved timer value for this claim
     const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
-    return savedTimers[claimId] !== undefined ? savedTimers[claimId] : null
+    return savedTimers[claimId] !== undefined ? savedTimers[claimId] : 180
   })
   const [timerStarted, setTimerStarted] = useState(() => {
     // Check if timer has already been started for this claim
     const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
-    return savedTimers[claimId] !== undefined
+    // If timer exists, it's already started, otherwise start it now
+    if (savedTimers[claimId] === undefined) {
+      // Initialize timer for new claim
+      savedTimers[claimId] = 180
+      sessionStorage.setItem('claimTimers', JSON.stringify(savedTimers))
+    }
+    return true
   })
   const [claimData, setClaimData] = useState(null)
   const [invoices, setInvoices] = useState([]) //  Added invoices state
@@ -61,6 +69,42 @@ const PatientClaimInfo = () => {
   const [isChecklistTabLocked, setIsChecklistTabLocked] = useState(true)
   const [isClinicalTabLocked, setIsClinicalTabLocked] = useState(true)
   const [isReviewTabLocked, setIsReviewTabLocked] = useState(true)
+  const [clinicalInvoiceItems, setClinicalInvoiceItems] = useState([])
+  const [reviewTotals, setReviewTotals] = useState({ totalApproved: 0, totalSavings: 0 })
+  const [editStatus, setEditStatus] = useState(null)
+  const [assignedUsername, setAssignedUsername] = useState(null)
+  const [isViewOnlyMode, setIsViewOnlyMode] = useState(false)
+
+  // Call assignment API on component mount (only if not already assigned)
+  useEffect(() => {
+    const assignClaim = async () => {
+      try {
+        // Get assignment status from Redux store
+        if (!assignmentStatus) {
+          console.warn('Assignment status not found in store')
+          return
+        }
+
+        // Only call assignment API if:
+        // 1. Not already assigned
+        // 2. Not expired
+        // 3. time_remaining_minutes >= 1
+        const shouldAssign = !assignmentStatus.is_assigned &&
+                           !assignmentStatus.is_expired &&
+                           (assignmentStatus.time_remaining_minutes || 0) >= 1
+
+        if (shouldAssign) {
+          await claimsService.assignClaim(claimId, { duration_minutes: 10 })
+        }
+      } catch (err) {
+        console.error('Error assigning claim:', err)
+      }
+    }
+
+    if (claimId && assignmentStatus) {
+      assignClaim()
+    }
+  }, [claimId, assignmentStatus])
 
   // Fetch claim extraction data from API
   useEffect(() => {
@@ -93,6 +137,28 @@ const PatientClaimInfo = () => {
               setOriginalInvoiceKey(invoiceKey)
             }
           }
+
+          // Extract edit_status and assignment info from claim_status
+          const claimStatus = response?.data?.claim_status
+          const extractedEditStatus = claimStatus?.edit_status
+          const extractedAssignedUsername = claimStatus?.assignment?.assigned_to_username
+
+          setEditStatus(extractedEditStatus)
+          setAssignedUsername(extractedAssignedUsername)
+
+          // Get current logged in username from localStorage or session
+          const loggedInUsername = localStorage.getItem('username') || sessionStorage.getItem('username')
+
+          // Determine if view-only mode
+          const isViewOnly = extractedEditStatus === 'AUTOMATED' && extractedAssignedUsername !== loggedInUsername
+          setIsViewOnlyMode(isViewOnly)
+
+          // If EDITED status, unlock all tabs
+          if (extractedEditStatus === 'EDITED') {
+            setIsChecklistTabLocked(false)
+            setIsClinicalTabLocked(false)
+            setIsReviewTabLocked(false)
+          }
         } else {
           console.warn('Transformation failed, using mock data')
           setClaimData(getClaimDetailsById(claimId) || {})
@@ -122,13 +188,22 @@ const PatientClaimInfo = () => {
         setClinicalLoading(true)
         setClinicalError(null)
 
-        // Try to get manual adjudication first
-        let response = await claimsService.getManualAdjudication(claimId)
+        let response
 
-        // If manual adjudication fails, fetch AI adjudication
-        if (!response.success) {
+        // Step 1: Try to get manual adjudication first
+        try {
+          response = await claimsService.getManualAdjudication(claimId)
+        } catch (manualErr) {
+          // Step 2: If manual adjudication fails, fetch AI adjudication
+          console.log('Manual adjudication not found, fetching AI adjudication')
           response = await claimsService.getAIAdjudication(claimId)
         }
+
+        // Step 3: Call re-adjudication
+        await claimsService.reAdjudicate(claimId)
+
+        // Step 4: Fetch AI adjudication again after re-adjudication
+        response = await claimsService.getAIAdjudication(claimId)
 
         // Store the adjudication response for later use
         setRawApiResponse(response)
@@ -180,25 +255,43 @@ const PatientClaimInfo = () => {
       try {
         setReviewLoading(true)
 
-        // Try to get manual adjudication first
-        let response = await claimsService.getManualAdjudication(claimId)
+        let response
 
-        // If manual adjudication fails, fetch AI adjudication
-        if (!response.success) {
+        // Try to get manual adjudication first
+        try {
+          response = await claimsService.getManualAdjudication(claimId)
+        } catch (manualErr) {
+          // If manual adjudication fails, fetch AI adjudication
+          console.log('Manual adjudication not found, fetching AI adjudication for review')
           response = await claimsService.getAIAdjudication(claimId)
         }
 
         if (response?.data?.adjudication_response) {
           const adjudicationResponse = response.data.adjudication_response
 
+          // Store the adjudication response for financial calculations
+          setRawApiResponse(response)
+
           // Transform adjudication response to review format
           const reviewData = transformAdjudicationToReview(adjudicationResponse, selectedSymptoms, selectedDiagnoses)
 
-          // Update review data
+          // Update review data and financials
           setClaimData(prevData => ({
             ...prevData,
-            reviewData: reviewData
+            reviewData: reviewData,
+            financials: {
+              ...prevData?.financials,
+              totalApproved: adjudicationResponse.total_allowed_amount || 0,
+              totalSavings: adjudicationResponse.total_savings || 0,
+              approved: adjudicationResponse.total_allowed_amount || 0
+            }
           }))
+
+          // Update reviewTotals for header
+          setReviewTotals({
+            totalApproved: adjudicationResponse.total_allowed_amount || 0,
+            totalSavings: adjudicationResponse.total_savings || 0
+          })
         }
       } catch (err) {
         console.error('Error fetching review data:', err)
@@ -328,44 +421,68 @@ const PatientClaimInfo = () => {
     { id: 'review', label: 'Review', locked: isReviewTabLocked }
   ], [isChecklistTabLocked, isClinicalTabLocked, isReviewTabLocked])
 
-  // Calculate dynamic financials for Clinical Validation tab
+  // Calculate dynamic financials for Clinical Validation tab and Review tab
   const financials = useMemo(() => {
-    if (activeTab === 'clinical' && claimData?.clinicalValidationInvoices) {
-      // Calculate totals from clinical validation invoices
-      const totals = claimData.clinicalValidationInvoices.reduce((acc, invoice) => {
+    // Get Total Requested from lct_claim_request->claim_data->total_cost
+    const totalRequested = rawExtractionResponse?.data?.lct_claim_request?.claim_data?.total_cost || 0
+    // Get Pre-Auth Amount from lct_claim_request->claim_data->preAuthDetails->authorizedAmount
+    const preAuthAmount = rawExtractionResponse?.data?.lct_claim_request?.claim_data?.preAuthDetails?.authorizedAmount || 0
+
+    if (activeTab === 'clinical') {
+      // Use clinicalInvoiceItems if available (edited data), otherwise use initial data
+      const invoicesToCalculate = clinicalInvoiceItems.length > 0
+        ? clinicalInvoiceItems
+        : (claimData?.clinicalValidationInvoices || [])
+
+      // Calculate total approved from clinical validation invoices
+      const totalApproved = invoicesToCalculate.reduce((acc, invoice) => {
         invoice.items?.forEach(item => {
-          acc.totalApproved += parseFloat(item.appAmt) || 0
-          acc.totalSavings += parseFloat(item.savings) || 0
+          acc += parseFloat(item.appAmt) || 0
         })
         return acc
-      }, { totalApproved: 0, totalSavings: 0 })
+      }, 0)
+
+      // Get total savings from adjudication_response
+      const totalSavingsFromAPI = rawApiResponse?.data?.adjudication_response?.total_savings || 0
 
       return {
-        ...claimData.financials,
-        approved: totals.totalApproved,
-        totalSavings: totals.totalSavings
+        ...claimData?.financials,
+        totalRequested: totalRequested,
+        preAuthAmount: preAuthAmount,
+        approved: totalApproved,
+        totalSavings: totalSavingsFromAPI
       }
     }
 
-    return claimData?.financials || {}
-  }, [activeTab, claimData?.clinicalValidationInvoices, claimData?.financials])
+    if (activeTab === 'review') {
+      // Use reviewTotals from ReviewTab
+      return {
+        ...claimData?.financials,
+        totalRequested: totalRequested,
+        preAuthAmount: preAuthAmount,
+        approved: reviewTotals.totalApproved,
+        totalSavings: reviewTotals.totalSavings
+      }
+    }
+
+    return {
+      ...claimData?.financials,
+      totalRequested: totalRequested,
+      preAuthAmount: preAuthAmount
+    }
+  }, [activeTab, clinicalInvoiceItems, claimData?.clinicalValidationInvoices, claimData?.financials, rawExtractionResponse, reviewTotals])
   // Updated handleSave with PUT API integration
   const handleSave = async () => {
     if (!claimId) return
 
+    // If in view-only mode, don't allow saves (this should not happen as button is hidden)
+    if (isViewOnlyMode) {
+      console.warn('Cannot save in view-only mode')
+      return
+    }
+
     // Handle Patient Info tab save
     if (activeTab === 'patient-info') {
-      // Start the timer when user clicks Save & Continue on Patient Info tab
-      if (!timerStarted) {
-        setTimerStarted(true)
-        setTimeRemaining(180) // Start with 180 seconds (3 minutes)
-
-        // Save initial timer state to sessionStorage
-        const savedTimers = JSON.parse(sessionStorage.getItem('claimTimers') || '{}')
-        savedTimers[claimId] = 180
-        sessionStorage.setItem('claimTimers', JSON.stringify(savedTimers))
-      }
-
       setActiveTab('digitisation')
       return
     }
@@ -465,6 +582,23 @@ const PatientClaimInfo = () => {
 
   const handleQueryClick = () => {
     setIsQueryModalOpen(true)
+  }
+
+  // Handle Continue button click for view-only mode
+  const handleContinue = () => {
+    // Just navigate to next tab without saving
+    if (activeTab === 'patient-info') {
+      setActiveTab('digitisation')
+    } else if (activeTab === 'digitisation') {
+      setIsChecklistTabLocked(false)
+      setActiveTab('checklist')
+    } else if (activeTab === 'checklist') {
+      setIsClinicalTabLocked(false)
+      setActiveTab('clinical')
+    } else if (activeTab === 'clinical') {
+      setIsReviewTabLocked(false)
+      setActiveTab('review')
+    }
   }
 
   // Helper function to clear timer for completed claims (optional)
@@ -646,11 +780,15 @@ const PatientClaimInfo = () => {
               onSave={(saveFunc) => setClinicalSaveFunction(() => saveFunc)}
               onRerunSuccess={handleRerunSuccess}
               onShowInvoice={handleShowInvoice}
+              onInvoiceItemsChange={setClinicalInvoiceItems}
             />
             )}
 
             {activeTab === 'review' && (
-              <ReviewTab reviewData={claimData.reviewData} />
+              <ReviewTab
+                reviewData={claimData.reviewData}
+                onTotalsChange={setReviewTotals}
+              />
             )}
           </div>
         </div>
@@ -665,6 +803,9 @@ const PatientClaimInfo = () => {
         setInvoices={setInvoices}
         activeTab={activeTab}
         validatedInvoices={validatedInvoices}
+        editStatus={editStatus}
+        isViewOnlyMode={isViewOnlyMode}
+        onContinue={handleContinue}
       />
 
       {/* Query Management Modal */}

@@ -13,11 +13,11 @@ const PatientDetails = ({ patient }) => {
           </label>
           <div className="flex items-center gap-2">
             <p className="text-sm font-medium">{patient?.name}</p>
-            {patient?.relation && (
+            {/* {patient?.relation && (
               <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
                 {patient.relation}
               </span>
-            )}
+            )} */}
           </div>
         </div>
         <div>
