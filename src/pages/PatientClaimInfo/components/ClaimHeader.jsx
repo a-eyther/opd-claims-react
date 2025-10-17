@@ -9,6 +9,8 @@ import FinancialSummary from '../../../components/common/FinancialSummary'
 const ClaimHeader = ({ claimId,claim_id, status, benefitType, timeRemaining, financials }) => {
   const navigate = useNavigate()
 
+  //console.log('ClaimHeader received timeRemaining:', timeRemaining)
+
   // Format time remaining in MM:SS
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60)
