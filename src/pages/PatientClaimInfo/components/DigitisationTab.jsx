@@ -57,6 +57,7 @@ const DigitisationTab = ({
   // const [invoices, setInvoices] = useState(initialInvoices)
   const [invalidReasonBoxIndex, setInvalidReasonBoxIndex] = useState(null)
   const [invalidReasons, setInvalidReasons] = useState({})
+  const [validationErrorIndex, setValidationErrorIndex] = useState(null);
 
   const debounceTimerDiagnosis = useRef(null)
   const debounceTimerSymptoms = useRef(null)
@@ -654,6 +655,11 @@ const DigitisationTab = ({
             {invalidReasonBoxIndex === invoiceIndex && !invalidInvoices[invoiceIndex] && (
               <div className="mt-4 border-t border-gray-200 pt-4">
                 <h4 className="text-sm font-semibold text-gray-900 mb-2">INVALID REASON</h4>
+
+                  {validationErrorIndex === invoiceIndex && (
+                      <p className="text-xs text-red-600 mb-2">Please give reason! It's a required field.</p>
+                  )}
+
                 <input
                   type="text"
                   value={invalidReasons[invoiceIndex] || ''}
@@ -669,7 +675,16 @@ const DigitisationTab = ({
                     Cancel
                   </button>
                   <button
-                    onClick={() => handleConfirmInvalid(invoiceIndex)}
+                    // onClick={() => handleConfirmInvalid(invoiceIndex)}
+                    onClick={() => {
+                        // 🔹 Added validation before confirming invalid
+                        if (!invalidReasons[invoiceIndex] || invalidReasons[invoiceIndex].trim() === '') {
+                            setValidationErrorIndex(invoiceIndex)
+                            return
+                        }
+                        setValidationErrorIndex(null)
+                        handleConfirmInvalid(invoiceIndex)
+                    }}
                     className="px-4 py-2 text-xs text-white bg-red-500 rounded hover:bg-red-600"
                   >
                     Confirm Invalid
