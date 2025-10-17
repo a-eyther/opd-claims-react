@@ -1,18 +1,21 @@
+import { useEffect } from 'react'
+
 /**
  * Review Tab Component
  * Displays final review with symptoms, diagnosis, adjudication details, and decision
  */
-const ReviewTab = ({ reviewData = {} }) => {
+const ReviewTab = ({ reviewData = {}, onTotalsChange = null }) => {
   const { symptoms = [], diagnoses = [], invoices = [], financialSummary = {}, productRules = [], decision = {} } = reviewData
 
-  // Calculate totals from invoice items
-  const calculatedTotals = invoices.reduce((acc, invoice) => {
-    invoice.items?.forEach(item => {
-      acc.totalApproved += parseFloat(item.approvedAmount) || 0
-      acc.totalSavings += parseFloat(item.savings) || 0
-    })
-    return acc
-  }, { totalApproved: 0, totalSavings: 0 })
+  // Notify parent when totals change - use financialSummary from API
+  useEffect(() => {
+    if (onTotalsChange && financialSummary) {
+      onTotalsChange({
+        totalApproved: financialSummary.totalApproved || 0,
+        totalSavings: financialSummary.totalSavings || 0
+      })
+    }
+  }, [financialSummary.totalApproved, financialSummary.totalSavings, onTotalsChange])
 
   return (
     <div className="space-y-6">
@@ -136,21 +139,22 @@ const ReviewTab = ({ reviewData = {} }) => {
         <h3 className="text-sm font-bold text-gray-900 mb-4">Financial Summary</h3>
 
         <div className="grid grid-cols-4 gap-4">
+        <div className="bg-gray-50 border border-gray-200 rounded p-3">
+            <div className="text-[10px] text-gray-600 mb-1">Total Requested Amount</div>
+            <div className="text-base font-bold text-gray-900">KES {financialSummary.totalRequested?.toLocaleString()}</div>
+          </div>
           <div className="bg-gray-50 border border-gray-200 rounded p-3">
             <div className="text-[10px] text-gray-600 mb-1">Total Invoiced Amount</div>
             <div className="text-base font-bold text-gray-900">KES {financialSummary.totalInvoiced?.toLocaleString()}</div>
           </div>
-          <div className="bg-gray-50 border border-gray-200 rounded p-3">
-            <div className="text-[10px] text-gray-600 mb-1">Total Requested Amount</div>
-            <div className="text-base font-bold text-gray-900">KES {financialSummary.totalRequested?.toLocaleString()}</div>
-          </div>
+
           <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
             <div className="text-[10px] text-yellow-700 mb-1">Total Approved Amount</div>
-            <div className="text-base font-bold text-yellow-700">KES {calculatedTotals.totalApproved.toLocaleString()}</div>
+            <div className="text-base font-bold text-yellow-700">KES {financialSummary.totalApproved?.toLocaleString()}</div>
           </div>
           <div className="bg-green-50 border border-green-200 rounded p-3">
             <div className="text-[10px] text-green-700 mb-1">Total Savings Amount</div>
-            <div className="text-base font-bold text-green-700">KES {calculatedTotals.totalSavings.toLocaleString()}</div>
+            <div className="text-base font-bold text-green-700">KES {financialSummary.totalSavings?.toLocaleString()}</div>
           </div>
         </div>
       </div>

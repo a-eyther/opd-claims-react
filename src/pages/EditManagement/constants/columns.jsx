@@ -1,9 +1,17 @@
 import StatusBadge from '../../../components/common/StatusBadge';
+import AssignViewButton from '../components/AssignViewButton';
+import TimeElapsed from '../components/TimeElapsed';
 
 /**
  * Table column definitions for Edit Management
  */
 export const editManagementColumns = [
+  {
+    key: 'actions',
+    header: 'Actions',
+    sortable: false,
+    render: (_value, row) => <AssignViewButton row={row} />,
+  },
   {
     key: 'id',
     header: 'Claim ID',
@@ -42,17 +50,7 @@ export const editManagementColumns = [
   {
     key: 'time_elapsed',
     header: 'Time Elapsed',
-    render: (value) => {
-      if (!value) return '-';
-      return (
-        <div className="flex items-center gap-1 text-blue-600">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span className="text-sm">{value.hours}h {value.minutes}m</span>
-        </div>
-      );
-    },
+    render: (_value, row) => <TimeElapsed createdAt={row.created_at} />,
   },
   {
     key: 'provider_name',
