@@ -13,13 +13,26 @@ const AssignViewButton = ({ row }) => {
   const assignmentStatus = row.assignment_status || {};
   const isAssigned = assignmentStatus.is_assigned;
   const isExpired = assignmentStatus.is_expired;
-  const timeRemainingMinutes = assignmentStatus.time_remaining_minutes || 0;
+  const createdAt = row.created_at;
+
+  // Calculate time remaining from created_at
+  let isTimeExpired = false;
+  if (createdAt) {
+    const createdAtDate = new Date(createdAt);
+    const currentDate = new Date();
+    const elapsedSeconds = Math.floor((currentDate - createdAtDate) / 1000);
+    const totalSeconds = 10 * 60; // 10 minutes
+    const remainingSeconds = totalSeconds - elapsedSeconds;
+
+    // Time expired if remaining seconds <= 0
+    isTimeExpired = remainingSeconds <= 0;
+  }
 
   // Show "View" button if:
   // 1. is_assigned is true
   // 2. is_expired is true
-  // 3. time_remaining_minutes < 1
-  const showViewOnly = isAssigned || isExpired || timeRemainingMinutes < 1;
+  // 3. Time calculated from created_at has expired (>= 10 minutes)
+  const showViewOnly = isAssigned || isExpired || isTimeExpired;
 
   const handleClick = (e) => {
     e.preventDefault();

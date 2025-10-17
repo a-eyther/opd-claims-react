@@ -680,51 +680,60 @@ const DigitisationTab = ({
 
             {/* Validation Badges */}
             <div className="flex justify-end gap-2 mt-3">
-              {validatedInvoices[invoiceIndex] ? (
+              {/* Only show buttons if invoice has at least one item */}
+              {invoice.items && invoice.items.length > 0 ? (
                 <>
-                  <span className="px-3 py-1 bg-green-500 text-white rounded text-xs font-medium">
-                    Valid
-                  </span>
-                  <button
-                    onClick={() => handleUndoValid(invoiceIndex)}
-                    className="px-3 py-1 bg-gray-500 text-white rounded text-xs font-medium hover:bg-gray-600"
-                  >
-                    Undo
-                  </button>
-                </>
-              ) : invalidInvoices[invoiceIndex] ? (
-                <>
-                  <span className="px-3 py-1 bg-red-500 text-white rounded text-xs font-medium">
-                    Invalid
-                  </span>
-                  <button
-                    onClick={() => {
-                      if (setInvalidInvoices) {
-                        const updated = { ...invalidInvoices }
-                        delete updated[invoiceIndex]
-                        setInvalidInvoices(updated)
-                      }
-                    }}
-                    className="px-3 py-1 bg-gray-500 text-white rounded text-xs font-medium hover:bg-gray-600"
-                  >
-                    Undo
-                  </button>
+                  {validatedInvoices[invoiceIndex] ? (
+                    <>
+                      <span className="px-3 py-1 bg-green-500 text-white rounded text-xs font-medium">
+                        Valid
+                      </span>
+                      <button
+                        onClick={() => handleUndoValid(invoiceIndex)}
+                        className="px-3 py-1 bg-gray-500 text-white rounded text-xs font-medium hover:bg-gray-600"
+                      >
+                        Undo
+                      </button>
+                    </>
+                  ) : invalidInvoices[invoiceIndex] ? (
+                    <>
+                      <span className="px-3 py-1 bg-red-500 text-white rounded text-xs font-medium">
+                        Invalid
+                      </span>
+                      <button
+                        onClick={() => {
+                          if (setInvalidInvoices) {
+                            const updated = { ...invalidInvoices }
+                            delete updated[invoiceIndex]
+                            setInvalidInvoices(updated)
+                          }
+                        }}
+                        className="px-3 py-1 bg-gray-500 text-white rounded text-xs font-medium hover:bg-gray-600"
+                      >
+                        Undo
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleInvalidClick(invoiceIndex)}
+                        className="px-3 py-1 bg-red-500 text-white rounded text-xs font-medium hover:bg-red-600"
+                      >
+                        Invalid
+                      </button>
+                      <button
+                        onClick={() => handleValidClick(invoiceIndex)}
+                        className="px-3 py-1 bg-green-500 text-white rounded text-xs font-medium hover:bg-green-600"
+                      >
+                        Valid
+                      </button>
+                    </>
+                  )}
                 </>
               ) : (
-                <>
-                  <button
-                    onClick={() => handleInvalidClick(invoiceIndex)}
-                    className="px-3 py-1 bg-red-500 text-white rounded text-xs font-medium hover:bg-red-600"
-                  >
-                    Invalid
-                  </button>
-                  <button
-                    onClick={() => handleValidClick(invoiceIndex)}
-                    className="px-3 py-1 bg-green-500 text-white rounded text-xs font-medium hover:bg-green-600"
-                  >
-                    Valid
-                  </button>
-                </>
+                <span className="px-3 py-1 bg-gray-400 text-white rounded text-xs font-medium">
+                  Pending (No Items)
+                </span>
               )}
             </div>
           </div>
