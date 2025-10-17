@@ -87,6 +87,62 @@ const DocumentViewer = memo(({
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 25, 50))
   const handleRotate = () => setRotation(prev => (prev + 90) % 360)
 
+  const handleDownload = async () => {
+    if (!documentUrl || !document) {
+      console.error('No document URL or document available')
+      return
+    }
+
+    const fileName = document.name || 'document.pdf'
+
+    try {
+      console.log('Attempting to download:', documentUrl)
+
+      // Try fetching without credentials for AWS S3 signed URLs
+      const response = await fetch(documentUrl, {
+        mode: 'cors'
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      console.log('Blob created:', blob.size, 'bytes')
+
+      // Create a download link
+      const url = window.URL.createObjectURL(blob)
+      const link = window.document.createElement('a')
+      link.href = url
+      link.download = fileName
+      window.document.body.appendChild(link)
+      link.click()
+
+      // Cleanup
+      setTimeout(() => {
+        window.document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      }, 100)
+    } catch (error) {
+      console.error('Error downloading file:', error)
+
+      // Fallback: Try direct download link if fetch fails (CORS issue)
+      try {
+        const link = window.document.createElement('a')
+        link.href = documentUrl
+        link.download = fileName
+        link.target = '_blank'
+        link.rel = 'noopener noreferrer'
+        window.document.body.appendChild(link)
+        link.click()
+        window.document.body.removeChild(link)
+      } catch (fallbackError) {
+        console.error('Fallback download also failed:', fallbackError)
+        alert('Unable to download the document. Please check your browser console for details.')
+      }
+    }
+  }
+
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages)
     setLoading(false)
@@ -218,7 +274,11 @@ const DocumentViewer = memo(({
             >
               <RotateIcon className="w-4 h-4 text-gray-600" />
             </button>
-            <button className="p-1 hover:bg-gray-100 rounded" title="Download">
+            <button
+              onClick={handleDownload}
+              className="p-1 hover:bg-gray-100 rounded"
+              title="Download"
+            >
               <DownloadIcon className="w-4 h-4 text-gray-600" />
             </button>
           </div>

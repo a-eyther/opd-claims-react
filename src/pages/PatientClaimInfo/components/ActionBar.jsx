@@ -26,9 +26,6 @@ const ActionBar = ({
   // Hide Save & Continue button if EDITED status
   const hideSaveButton = editStatus === 'EDITED'
 
-  // Show Continue button instead of Save & Continue if view-only mode
-  const showContinueButton = isViewOnlyMode
-
   return (
     <div className="bg-white border-t border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
@@ -53,9 +50,9 @@ const ActionBar = ({
             )}
           </button>
 
-          {!hideSaveButton && !showContinueButton && (
+          {!hideSaveButton && (
             <button
-              onClick={onSave}
+              onClick={isViewOnlyMode ? onContinue : onSave}
               disabled={hasPendingInvoices}
               className={`px-6 py-2 text-sm font-medium rounded-md transition-colors ${
                 hasPendingInvoices
@@ -64,15 +61,6 @@ const ActionBar = ({
               }`}
             >
               Save & Continue
-            </button>
-          )}
-
-          {showContinueButton && (
-            <button
-              onClick={onContinue}
-              className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Continue
             </button>
           )}
         </div>
