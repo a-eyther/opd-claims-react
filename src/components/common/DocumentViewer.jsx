@@ -304,7 +304,7 @@ const DocumentViewer = memo(({
               <div
                 className="transition-all duration-300"
                 style={{
-                  transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
+                  transform: `rotate(${rotation}deg)`,
                   transformOrigin: 'center center'
                 }}
               >
@@ -320,8 +320,9 @@ const DocumentViewer = memo(({
                 >
                   <PdfPage
                     pageNumber={currentPage}
-                    height={700}
-                    renderTextLayer={false}
+                    width={800}
+                    scale={zoom / 100}
+                    renderTextLayer={true}
                     renderAnnotationLayer={false}
                     className="shadow-lg"
                     loading={<div className="text-gray-400">Loading page...</div>}
