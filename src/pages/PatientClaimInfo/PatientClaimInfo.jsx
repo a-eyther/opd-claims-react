@@ -418,12 +418,17 @@ const PatientClaimInfo = () => {
       code: d.code || ''
     }))
 
+    // Calculate total invoiced from sum of all invoice totalInvoiced amounts
+    const totalInvoicedFromInvoices = Object.values(invoiceMap).reduce((acc, invoice) => {
+      return acc + (invoice.totalInvoiced || 0)
+    }, 0)
+
     return {
       symptoms: symptoms,
       diagnoses: diagnoses,
       invoices: Object.values(invoiceMap),
       financialSummary: {
-        totalInvoiced: adjudicationResponse.total_request_amount || 0,
+        totalInvoiced: totalInvoicedFromInvoices,
         totalRequested: adjudicationResponse.total_request_amount || 0,
         totalApproved: adjudicationResponse.total_allowed_amount || 0,
         totalSavings: adjudicationResponse.total_savings || 0
