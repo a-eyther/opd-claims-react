@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 import { selectUser } from '../../store/slices/authSlice'
+import { updateAssignmentStatus } from '../../store/slices/claimsSlice'
 import ClaimHeader from './components/ClaimHeader'
 import TabNavigation from './components/TabNavigation'
 import DocumentViewer from '../../components/common/DocumentViewer'
@@ -26,6 +27,7 @@ import { buildExtractionPatchPayload } from '../../utils/buildExtractionPatchPay
 const PatientClaimInfo = () => {
   const { claimId } = useParams()
   const navigate = useNavigate()
+  const dispatch = useDispatch()
 
   // Get selected symptoms and diagnoses from Redux store
   const selectedSymptoms = useSelector(state => state.symptoms?.selectedSymptoms || [])
@@ -84,7 +86,7 @@ const PatientClaimInfo = () => {
           const createdAtDate = new Date(createdAt)
           const currentDate = new Date()
           const elapsedSeconds = Math.floor((currentDate - createdAtDate) / 1000)
-          const totalSeconds = 10 * 60 // 10 minutes
+          const totalSeconds = 11000 * 60 // 11000 minutes
           const remainingSeconds = totalSeconds - elapsedSeconds
           isTimeExpired = remainingSeconds <= 0
         }
@@ -98,7 +100,7 @@ const PatientClaimInfo = () => {
                            !isTimeExpired
 
         if (shouldAssign) {
-          const response = await claimsService.assignClaim(claimId, { duration_minutes: 10 })
+          const response = await claimsService.assignClaim(claimId, { duration_minutes: 11000 })
 
           console.log('Assignment API Response:', response)
 
@@ -106,6 +108,9 @@ const PatientClaimInfo = () => {
           if (response && response.success === false) {
             console.log('Assignment failed - showing modal')
             setShowAssignmentErrorModal(true)
+          } else if (response && response.success === true && response.data) {
+            // Update Redux store with new assignment status
+            dispatch(updateAssignmentStatus(response.data))
           }
         }
       } catch (err) {
@@ -188,8 +193,8 @@ const PatientClaimInfo = () => {
               elapsedMinutes: (elapsedSeconds / 60).toFixed(2)
             })
 
-            // 10 minutes = 600 seconds
-            const totalSeconds = 10 * 60
+            // 11000 minutes
+            const totalSeconds = 11000 * 60
             const remainingSeconds = totalSeconds - elapsedSeconds
 
             // Check if time has expired
@@ -445,6 +450,24 @@ const PatientClaimInfo = () => {
       }
     }
   }
+
+  // Update timer when assignment status changes (e.g., after extension)
+  useEffect(() => {
+    if (!assignmentStatus) return
+
+    // If assignment status has time_remaining_minutes, use it to update the timer
+    if (assignmentStatus.time_remaining_minutes !== undefined && assignmentStatus.time_remaining_minutes !== null) {
+      const remainingSeconds = assignmentStatus.time_remaining_minutes * 60
+      console.log('Assignment status updated, setting timeRemaining to:', remainingSeconds)
+      setTimeRemaining(remainingSeconds)
+      setTimerStarted(true)
+
+      // Clear timeout modal if timer is extended
+      if (remainingSeconds > 0) {
+        setShowTimeoutModal(false)
+      }
+    }
+  }, [assignmentStatus])
 
   // Timer countdown effect - counts down from 10 minutes
   useEffect(() => {

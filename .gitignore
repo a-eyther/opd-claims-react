@@ -24,3 +24,5 @@ jenkinsfile
 *.sln
 *.sw?
 *.md
+
+.claude
