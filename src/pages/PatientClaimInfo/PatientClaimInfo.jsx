@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { selectUser } from '../../store/slices/authSlice'
@@ -69,9 +69,18 @@ const PatientClaimInfo = () => {
   const [currentUsername, setCurrentUsername] = useState(null)
   const [showAssignmentErrorModal, setShowAssignmentErrorModal] = useState(false)
 
+  // Track if assignment API has been attempted to prevent infinite loop
+  const assignmentAttempted = useRef(false)
+
   // Call assignment API on component mount (only if not already assigned)
   useEffect(() => {
     const assignClaim = async () => {
+      // Prevent infinite loop - only attempt assignment once
+      if (assignmentAttempted.current) {
+        console.log('Assignment already attempted, skipping')
+        return
+      }
+
       try {
         // Get assignment status from Redux store
         if (!assignmentStatus) {
@@ -100,6 +109,9 @@ const PatientClaimInfo = () => {
                            !isTimeExpired
 
         if (shouldAssign) {
+          // Mark assignment as attempted before API call
+          assignmentAttempted.current = true
+
           const response = await claimsService.assignClaim(claimId, { duration_minutes: 11000 })
 
           console.log('Assignment API Response:', response)
@@ -112,6 +124,9 @@ const PatientClaimInfo = () => {
             // Update Redux store with new assignment status
             dispatch(updateAssignmentStatus(response.data))
           }
+        } else {
+          console.log('Should not assign - already assigned or expired')
+          assignmentAttempted.current = true // Mark as attempted even if we skip
         }
       } catch (err) {
         console.error('Error assigning claim:', err)
@@ -125,10 +140,10 @@ const PatientClaimInfo = () => {
       }
     }
 
-    if (claimId && assignmentStatus) {
+    if (claimId && assignmentStatus && !assignmentAttempted.current) {
       assignClaim()
     }
-  }, [claimId, assignmentStatus])
+  }, [claimId, assignmentStatus, dispatch])
 
   // Fetch claim extraction data from API
   useEffect(() => {
@@ -268,10 +283,10 @@ const PatientClaimInfo = () => {
         }
 
         // Step 3: Call re-adjudication
-        await claimsService.reAdjudicate(claimId)
+        // await claimsService.reAdjudicate(claimId)
 
         // Step 4: Fetch AI adjudication again after re-adjudication
-        response = await claimsService.getAIAdjudication(claimId)
+        // response = await claimsService.getAIAdjudication(claimId)
 
         // Store the adjudication response for later use
         setRawApiResponse(response)
