@@ -48,7 +48,11 @@ const EditManagement = () => {
     return page;
   });
   const [totalPages, setTotalPages] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(() => {
+    // Restore saved page size from sessionStorage
+    const savedPageSize = sessionStorage.getItem('editManagement_pageSize');
+    return savedPageSize ? parseInt(savedPageSize, 10) : 10;
+  });
 
   // Fetch claims with filters - wrapped in useCallback to avoid stale closures
   const fetchClaims = useCallback(async () => {
@@ -179,6 +183,19 @@ const EditManagement = () => {
     sessionStorage.setItem('editManagement_currentPage', currentPage.toString());
   }, [currentPage]);
 
+  // Save page size to sessionStorage whenever it changes
+  useEffect(() => {
+    console.log('EditManagement: Saving pageSize to sessionStorage:', pageSize);
+    sessionStorage.setItem('editManagement_pageSize', pageSize.toString());
+  }, [pageSize]);
+
+  // Handle page size change - reset to page 1
+  const handlePageSizeChange = (newPageSize) => {
+    console.log('EditManagement: Page size changed to:', newPageSize);
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
+
   return (
     <div>
       {/* Page Header */}
@@ -258,6 +275,7 @@ const EditManagement = () => {
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
+          onPageSizeChange={handlePageSizeChange}
         />
       </div>
     </div>

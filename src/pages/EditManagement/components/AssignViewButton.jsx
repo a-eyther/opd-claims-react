@@ -21,7 +21,7 @@ const AssignViewButton = ({ row }) => {
     const createdAtDate = new Date(createdAt);
     const currentDate = new Date();
     const elapsedSeconds = Math.floor((currentDate - createdAtDate) / 1000);
-    const totalSeconds = 10 * 60; // 10 minutes
+    const totalSeconds = 11000 * 60; // 11000 minutes
     const remainingSeconds = totalSeconds - elapsedSeconds;
 
     // Time expired if remaining seconds <= 0
